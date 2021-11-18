@@ -8,10 +8,27 @@ body {
     background-color: black;
 }
 
-button {
+button,
+input {
     background-color: transparent;
     border: 2px solid white;
     border-radius: 8px;
     padding: 8px;
     margin: 8px;
+    text-align: center;
+}
+
+.column {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+}
+
+.fullscreen {
+    width: 100vw;
+    height: 100vh;
+    position: absolute;
+    left: 0;
+    top: 0;
 }

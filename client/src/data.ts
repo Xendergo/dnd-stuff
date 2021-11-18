@@ -6,7 +6,7 @@ export let IS_GM = new Store(
     data => sessionStorage.setItem("is_gm", data ? "true" : "false")
 )
 
-export let GAME_NAME: Store<string | null> = new Store(
+export let CAMPAIGN_NAME: Store<string | null> = new Store(
     sessionStorage.getItem("game_name"),
     data => {
         if (data) {
@@ -17,16 +17,16 @@ export let GAME_NAME: Store<string | null> = new Store(
     }
 )
 
-let games_gming_raw = JSON.parse(
+let campaigns_gming_raw = JSON.parse(
     localStorage.getItem("games_gming") ?? "{}"
 ) as { [key: string]: string[] }
 
-let games_gming = {} as { [key: string]: Character[] }
+let campaigns_gming = {} as { [key: string]: Character[] }
 
-Object.keys(games_gming_raw).forEach(key => {
-    games_gming[key] = games_gming_raw[key].map(v => new Character(v))
+Object.keys(campaigns_gming_raw).forEach(key => {
+    campaigns_gming[key] = campaigns_gming_raw[key].map(v => new Character(v))
 })
 
-export let GAMES_GMING = new Store(games_gming, data =>
+export let CAMPAIGNS_GMING = new Store(campaigns_gming, data =>
     localStorage.setItem("games_gming", JSON.stringify(data))
 )

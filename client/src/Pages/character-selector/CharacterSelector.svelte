@@ -1,11 +1,11 @@
 <script lang="ts">
-    import { GAMES_GMING, GAME_NAME, IS_GM } from "../../data"
+    import { CAMPAIGNS_GMING, CAMPAIGN_NAME, IS_GM } from "../../data"
 
     import { characters } from "../../characters"
 </script>
 
 <main>
-    <div>
+    <div class="column">
         {#if !$IS_GM}
             {#each $characters as character}
                 <p>{character.name}</p>
@@ -13,19 +13,20 @@
             <div>
                 <button>New character</button>
             </div>
-        {:else if $GAME_NAME === null}
-            {#each Object.keys($GAMES_GMING) as name}
+        {:else if $CAMPAIGN_NAME === null}
+            {#each Object.keys($CAMPAIGNS_GMING) as name}
                 <p>{name}</p>
             {/each}
             <div>
-                <button>New game</button>
+                <a href="/campaign-creator/"><button>New campaign</button></a>
             </div>
         {:else}
-            {#each $GAMES_GMING[$GAME_NAME] as npc}
+            <p>{$CAMPAIGN_NAME}</p>
+            {#each $CAMPAIGNS_GMING[$CAMPAIGN_NAME] as npc}
                 <p>{npc.name}</p>
             {/each}
             <div>
-                <button>New character</button>
+                <button>New NPC</button>
             </div>
         {/if}
     </div>
@@ -42,13 +43,6 @@
 </main>
 
 <style>
-    div {
-        display: flex;
-        flex-direction: column;
-        justify-content: center;
-        align-items: center;
-    }
-
     p {
         border-bottom: 1px dotted white;
     }

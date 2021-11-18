@@ -12,9 +12,10 @@ export default defineConfig({
     build: {
         rollupOptions: {
             input: {
-                index: resolve(
+                index: resolve(__dirname, "index.html"),
+                "campaign-creator": resolve(
                     __dirname,
-                    "src/Pages/character-selector/index.html"
+                    "campaign-creator/index.html"
                 ),
             },
         },
