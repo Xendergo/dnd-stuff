@@ -17,6 +17,10 @@ export default defineConfig({
                     __dirname,
                     "campaign-creator/index.html"
                 ),
+                "character-creator": resolve(
+                    __dirname,
+                    "character-creator/index.html"
+                ),
             },
         },
     },

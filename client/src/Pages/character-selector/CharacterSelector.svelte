@@ -14,7 +14,9 @@
             {/each}
             <tr>
                 <td class="no-border">
-                    <button>New character</button>
+                    <a href="/character-creator/"
+                        ><button>New character</button></a
+                    >
                 </td>
             </tr>
         {:else if $CAMPAIGN_NAME === null}
