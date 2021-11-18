@@ -5,31 +5,45 @@
 </script>
 
 <main>
-    <div class="column">
+    <table>
         {#if !$IS_GM}
             {#each $characters as character}
-                <p>{character.name}</p>
+                <tr>
+                    <td>{character.name}</td>
+                </tr>
             {/each}
-            <div>
-                <button>New character</button>
-            </div>
+            <tr>
+                <td class="no-border">
+                    <button>New character</button>
+                </td>
+            </tr>
         {:else if $CAMPAIGN_NAME === null}
             {#each Object.keys($CAMPAIGNS_GMING) as name}
-                <p>{name}</p>
+                <tr>
+                    <td>{name}</td>
+                </tr>
             {/each}
-            <div>
-                <a href="/campaign-creator/"><button>New campaign</button></a>
-            </div>
+            <tr>
+                <td class="no-border">
+                    <a href="/campaign-creator/"
+                        ><button>New campaign</button></a
+                    >
+                </td>
+            </tr>
         {:else}
-            <p>{$CAMPAIGN_NAME}</p>
+            <tr><td>{$CAMPAIGN_NAME}</td></tr>
             {#each $CAMPAIGNS_GMING[$CAMPAIGN_NAME] as npc}
-                <p>{npc.name}</p>
+                <tr>
+                    <td>{npc.name}</td>
+                </tr>
             {/each}
-            <div>
-                <button>New NPC</button>
-            </div>
+            <tr>
+                <td class="no-border">
+                    <button>New NPC</button>
+                </td>
+            </tr>
         {/if}
-    </div>
+    </table>
 
     {#if !$IS_GM}
         <button id="gm-button" on:click={() => ($IS_GM = true)}
@@ -43,8 +57,19 @@
 </main>
 
 <style>
-    p {
-        border-bottom: 1px dotted white;
+    td {
+        border-bottom: 1px dashed white;
+        padding: 8px;
+    }
+
+    .no-border {
+        border-bottom: none;
+    }
+
+    table {
+        text-align: center;
+        margin-left: auto;
+        margin-right: auto;
     }
 
     #gm-button {
