@@ -1,0 +1,17 @@
+* {
+    font-size: x-large;
+    font-family: "Liberation serif", "Times New Roman", Times, serif;
+    color: white;
+}
+
+body {
+    background-color: black;
+}
+
+button {
+    background-color: transparent;
+    border: 2px solid white;
+    border-radius: 8px;
+    padding: 8px;
+    margin: 8px;
+}
