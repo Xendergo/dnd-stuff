@@ -18,9 +18,19 @@
                         // TODO
                         throw new Error("TODO")
                     } else {
-                        characters.update(
-                            v => (v.push(new Character({ name })), v)
-                        )
+                        if (
+                            $characters.reduce(
+                                (a, v) => v.name === name || a,
+                                false
+                            )
+                        ) {
+                            error =
+                                "You're already playing a character with that name"
+                        } else {
+                            characters.update(
+                                v => (v.push(new Character({ name })), v)
+                            )
+                        }
                     }
                 } else {
                     error = "Enter a name"

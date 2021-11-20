@@ -8,8 +8,14 @@
     <table>
         {#if !$IS_GM}
             {#each $characters as character}
-                <tr>
-                    <td>{character.name}</td>
+                <tr
+                    ><td
+                        ><a
+                            href={`/character-data/?character=${character.name}`}
+                        >
+                            {character.name}
+                        </a></td
+                    >
                 </tr>
             {/each}
             <tr>
@@ -61,7 +67,14 @@
 <style>
     td {
         border-bottom: 1px dashed white;
+    }
+
+    td a {
+        display: inline-block;
+        width: 100%;
+        height: 100%;
         padding: 8px;
+        text-decoration: none;
     }
 
     .no-border {
