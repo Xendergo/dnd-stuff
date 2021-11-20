@@ -45,7 +45,12 @@
             <tr><td class="title">{CAMPAIGN_NAME}</td></tr>
             {#each $CAMPAIGNS_GMING[CAMPAIGN_NAME] as npc}
                 <tr>
-                    <td>{npc.name}</td>
+                    <td
+                        ><a
+                            href={`/character-data/?gm=true&campaign=${CAMPAIGN_NAME}&character=${npc.name}`}
+                            >{npc.name}</a
+                        ></td
+                    >
                 </tr>
             {/each}
             <tr>

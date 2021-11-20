@@ -14,8 +14,6 @@
         IS_GM = false
     }
 
-    console.log(IS_GM)
-
     let name = ""
 
     let error = ""
@@ -48,6 +46,8 @@
                                     v
                                 )
                             )
+
+                            location.href = `/character-data/?gm=true&campaign=${CAMPAIGN_NAME}&character=${name}`
                         }
                     } else {
                         if (
@@ -63,7 +63,7 @@
                                 v => (v.push(new Character({ name })), v)
                             )
 
-                            location.href = `/character-data/?character=${name}`
+                            location.href = `/character-data/?gm=false&character=${name}`
                         }
                     }
                 } else {

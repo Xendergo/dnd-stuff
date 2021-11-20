@@ -1,4 +1,6 @@
 <script lang="ts">
+    import { CAMPAIGNS_GMING } from "../../data"
+
     import { Store } from "../../better-store"
 
     import { characters } from "../../characters"
@@ -6,25 +8,42 @@
 
     const urlParams = new URLSearchParams(window.location.search)
 
-    let character_name = urlParams.get("character")
+    let characterName = urlParams.get("character")
 
-    if (character_name === null) {
+    if (characterName === null) {
         window.location.href = "/"
     }
 
-    let character_index = $characters.findIndex(v => v.name === character_name)
+    let IS_GM = urlParams.get("gm") === "true"
+    let CAMPAIGN_NAME = urlParams.get("campaign")
 
-    if (character_index === -1) {
+    if (
+        IS_GM &&
+        (CAMPAIGN_NAME === null ||
+            !Object.keys($CAMPAIGNS_GMING).includes(CAMPAIGN_NAME))
+    ) {
+        location.href = "/"
+    }
+
+    let characterList = IS_GM
+        ? new Store($CAMPAIGNS_GMING[CAMPAIGN_NAME], v =>
+              CAMPAIGNS_GMING.notifySubscribers()
+          )
+        : characters
+
+    let characterIndex = $characterList.findIndex(v => v.name === characterName)
+
+    if (characterIndex === -1) {
         window.location.href = "/"
     }
 
-    let character = new Store($characters[character_index], v =>
-        characters.notifySubscribers()
+    let character = new Store($characterList[characterIndex], v =>
+        characterList.notifySubscribers()
     )
 </script>
 
 <svelte:head>
-    <title>{character_name} | Character data</title>
+    <title>{characterName} | Character data</title>
 </svelte:head>
 
 <main>
