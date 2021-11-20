@@ -1,18 +1,20 @@
 <script lang="ts">
+    import type { Store } from "src/better-store"
+
     import type { Character } from "src/characters"
     import { roll } from "../../dice"
 
-    export let character: Character
+    export let character: Store<Character>
 </script>
 
 <table>
     <tr>
         <td>
             <p>
-                HP <input type="number" bind:value={character.hp} /><button
-                    on:click={() => (character.hp -= 1)}>-1</button
-                ><button on:click={() => (character.hp += 1)}>+1</button><button
-                    on:click={() => (character.hp = character.hp_max)}
+                HP <input type="number" bind:value={$character.hp} /><button
+                    on:click={() => ($character.hp -= 1)}>-1</button
+                ><button on:click={() => ($character.hp += 1)}>+1</button
+                ><button on:click={() => ($character.hp = $character.hp_max)}
                     >🔄</button
                 >
             </p>
@@ -21,7 +23,7 @@
     <tr>
         <td>
             <p>
-                max HP <input type="number" bind:value={character.hp_max} />
+                max HP <input type="number" bind:value={$character.hp_max} />
             </p>
         </td>
     </tr>
@@ -32,10 +34,10 @@
                     type="number"
                     min="1"
                     max="20"
-                    bind:value={character.initiative}
+                    bind:value={$character.initiative}
                 /><button
                     on:click={() => {
-                        character.initiative = roll("d20")
+                        $character.initiative = roll("d20")
                     }}>🎲</button
                 >
             </p>

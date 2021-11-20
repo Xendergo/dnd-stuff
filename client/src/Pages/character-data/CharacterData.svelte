@@ -1,4 +1,6 @@
 <script lang="ts">
+    import { Store } from "../../better-store"
+
     import { characters } from "../../characters"
     import BattleData from "./BattleData.svelte"
 
@@ -16,7 +18,9 @@
         window.location.href = "/"
     }
 
-    let character = $characters[character_index]
+    let character = new Store($characters[character_index], v =>
+        characters.notifySubscribers()
+    )
 </script>
 
 <svelte:head>
