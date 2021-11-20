@@ -1,12 +1,15 @@
 <script lang="ts">
-    import { CAMPAIGNS_GMING, CAMPAIGN_NAME, IS_GM } from "../../data"
+    import { CAMPAIGNS_GMING, urlParams } from "../../data"
 
     import { characters } from "../../characters"
+
+    let IS_GM = urlParams.get("gm") === "true"
+    let CAMPAIGN_NAME: string | null = urlParams.get("campaign") ?? null
 </script>
 
 <main>
     <table>
-        {#if !$IS_GM}
+        {#if !IS_GM}
             {#each $characters as character}
                 <tr
                     ><td
@@ -25,10 +28,10 @@
                     >
                 </td>
             </tr>
-        {:else if $CAMPAIGN_NAME === null}
+        {:else if CAMPAIGN_NAME === null}
             {#each Object.keys($CAMPAIGNS_GMING) as name}
                 <tr>
-                    <td>{name}</td>
+                    <td><a href={`/?gm=true&campaign=${name}`}>{name}</a></td>
                 </tr>
             {/each}
             <tr>
@@ -39,26 +42,29 @@
                 </td>
             </tr>
         {:else}
-            <tr><td>{$CAMPAIGN_NAME}</td></tr>
-            {#each $CAMPAIGNS_GMING[$CAMPAIGN_NAME] as npc}
+            <tr><td class="title">{CAMPAIGN_NAME}</td></tr>
+            {#each $CAMPAIGNS_GMING[CAMPAIGN_NAME] as npc}
                 <tr>
                     <td>{npc.name}</td>
                 </tr>
             {/each}
             <tr>
                 <td class="no-border">
-                    <button>New NPC</button>
+                    <a
+                        href={`/character-creator/?gm=true&campaign=${CAMPAIGN_NAME}`}
+                        ><button>New NPC</button></a
+                    >
                 </td>
             </tr>
         {/if}
     </table>
 
-    {#if !$IS_GM}
-        <button id="gm-button" on:click={() => ($IS_GM = true)}
+    {#if !IS_GM}
+        <button id="gm-button" on:click={() => (IS_GM = true)}
             >I'm the GM</button
         >
     {:else}
-        <button id="gm-button" on:click={() => ($IS_GM = false)}
+        <button id="gm-button" on:click={() => (IS_GM = false)}
             >I'm not the GM</button
         >
     {/if}
@@ -67,13 +73,18 @@
 <style>
     td {
         border-bottom: 1px dashed white;
+        padding: 8px;
+    }
+
+    .title {
+        font-size: xx-large;
+        border-bottom: 1px solid white;
     }
 
     td a {
         display: inline-block;
         width: 100%;
         height: 100%;
-        padding: 8px;
         text-decoration: none;
     }
 

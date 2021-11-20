@@ -5,7 +5,7 @@ export class Store<T> implements Writable<T> {
         this._value = value
 
         if (write) {
-            this.subscribe(write)
+            this.subscribers.push(write)
         }
     }
 

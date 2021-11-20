@@ -1,7 +1,20 @@
 <script lang="ts">
+    import { CAMPAIGNS_GMING, urlParams } from "../../data"
+
     import { Character, characters } from "../../characters"
 
-    import { IS_GM } from "../../data"
+    let IS_GM = urlParams.get("gm") === "true"
+    let CAMPAIGN_NAME = urlParams.get("campaign")
+
+    if (
+        IS_GM &&
+        (CAMPAIGN_NAME === null ||
+            !Object.keys($CAMPAIGNS_GMING).includes(CAMPAIGN_NAME))
+    ) {
+        IS_GM = false
+    }
+
+    console.log(IS_GM)
 
     let name = ""
 
@@ -10,13 +23,32 @@
 
 <main>
     <div class="column fullscreen">
-        <input placeholder="Name" bind:value={name} />
+        <input
+            placeholder={`Name of ${IS_GM ? "NPC" : "Character"}`}
+            bind:value={name}
+        />
         <button
             on:click={() => {
                 if (name !== "") {
-                    if ($IS_GM) {
-                        // TODO
-                        throw new Error("TODO")
+                    if (IS_GM) {
+                        if (
+                            $CAMPAIGNS_GMING[CAMPAIGN_NAME].reduce(
+                                (a, v) => v.name === name || a,
+                                false
+                            )
+                        ) {
+                            error =
+                                "You're already playing an NPC with that name"
+                        } else {
+                            CAMPAIGNS_GMING.update(
+                                v => (
+                                    v[CAMPAIGN_NAME].push(
+                                        new Character({ name })
+                                    ),
+                                    v
+                                )
+                            )
+                        }
                     } else {
                         if (
                             $characters.reduce(
