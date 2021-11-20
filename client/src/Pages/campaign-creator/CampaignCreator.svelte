@@ -1,5 +1,5 @@
 <script lang="ts">
-    import { CAMPAIGNS_GMING, CAMPAIGN_NAME } from "../../data"
+    import { CAMPAIGNS_GMING } from "../../data"
 
     let name = ""
 

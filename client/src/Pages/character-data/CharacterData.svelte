@@ -11,7 +11,7 @@
     let characterName = urlParams.get("character")
 
     if (characterName === null) {
-        window.location.href = "/"
+        window.location.href = "../"
     }
 
     let IS_GM = urlParams.get("gm") === "true"
@@ -22,7 +22,7 @@
         (CAMPAIGN_NAME === null ||
             !Object.keys($CAMPAIGNS_GMING).includes(CAMPAIGN_NAME))
     ) {
-        location.href = "/"
+        location.href = "../"
     }
 
     let characterList = IS_GM
@@ -34,7 +34,7 @@
     let characterIndex = $characterList.findIndex(v => v.name === characterName)
 
     if (characterIndex === -1) {
-        window.location.href = "/"
+        window.location.href = "../"
     }
 
     let character = new Store($characterList[characterIndex], v =>

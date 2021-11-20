@@ -14,7 +14,7 @@
                 <tr
                     ><td
                         ><a
-                            href={`/character-data/?character=${character.name}`}
+                            href={`character-data/?character=${character.name}`}
                         >
                             {character.name}
                         </a></td
@@ -23,7 +23,7 @@
             {/each}
             <tr>
                 <td class="no-border">
-                    <a href="/character-creator/"
+                    <a href="character-creator/"
                         ><button>New character</button></a
                     >
                 </td>
@@ -31,13 +31,12 @@
         {:else if CAMPAIGN_NAME === null}
             {#each Object.keys($CAMPAIGNS_GMING) as name}
                 <tr>
-                    <td><a href={`/?gm=true&campaign=${name}`}>{name}</a></td>
+                    <td><a href={`../?gm=true&campaign=${name}`}>{name}</a></td>
                 </tr>
             {/each}
             <tr>
                 <td class="no-border">
-                    <a href="/campaign-creator/"
-                        ><button>New campaign</button></a
+                    <a href="campaign-creator/"><button>New campaign</button></a
                     >
                 </td>
             </tr>
@@ -47,7 +46,7 @@
                 <tr>
                     <td
                         ><a
-                            href={`/character-data/?gm=true&campaign=${CAMPAIGN_NAME}&character=${npc.name}`}
+                            href={`character-data/?gm=true&campaign=${CAMPAIGN_NAME}&character=${npc.name}`}
                             >{npc.name}</a
                         ></td
                     >
@@ -56,7 +55,7 @@
             <tr>
                 <td class="no-border">
                     <a
-                        href={`/character-creator/?gm=true&campaign=${CAMPAIGN_NAME}`}
+                        href={`character-creator/?gm=true&campaign=${CAMPAIGN_NAME}`}
                         ><button>New NPC</button></a
                     >
                 </td>
