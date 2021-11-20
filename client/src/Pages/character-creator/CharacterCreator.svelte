@@ -30,6 +30,8 @@
                             characters.update(
                                 v => (v.push(new Character({ name })), v)
                             )
+
+                            location.href = `/character-data/?character=${name}`
                         }
                     }
                 } else {
