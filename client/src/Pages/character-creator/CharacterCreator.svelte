@@ -47,7 +47,7 @@
                                 )
                             )
 
-                            location.href = `character-data/?gm=true&campaign=${CAMPAIGN_NAME}&character=${name}`
+                            location.href = `../character-data/?gm=true&campaign=${CAMPAIGN_NAME}&character=${name}`
                         }
                     } else {
                         if (
@@ -63,7 +63,7 @@
                                 v => (v.push(new Character({ name })), v)
                             )
 
-                            location.href = `character-data/?gm=false&character=${name}`
+                            location.href = `../character-data/?gm=false&character=${name}`
                         }
                     }
                 } else {
