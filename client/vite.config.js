@@ -22,6 +22,10 @@ export default defineConfig({
                     __dirname,
                     "character-creator/index.html"
                 ),
+                "character-data": resolve(
+                    __dirname,
+                    "character-data/index.html"
+                ),
             },
         },
     },
