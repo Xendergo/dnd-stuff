@@ -1,20 +1,30 @@
-use iced::Sandbox;
+use druid::widget::{Align, Label};
+use druid::{AppLauncher, Data, Env, Lens, Widget, WindowDesc};
 
-pub enum Gui {
-    CampaignSelector {},
+#[derive(Clone, Data, Lens)]
+struct Gui {
 }
 
-#[derive(Debug)]
-enum Message {}
+pub fn create_window() {
+    let main_window = WindowDesc::new(build)
+        .title("DnD server")
+        .window_size((400.0, 400.0));
 
-impl Sandbox for Gui {
-    type Message = Message;
+    // create the initial app state
+    let initial_state = Gui {
+    };
 
-    fn new() -> Self {
-        Gui::CampaignSelector {}
-    }
+    // start the application
+    AppLauncher::with_window(main_window)
+        .launch(initial_state)
+        .expect("Failed to launch application");
 
-    fn title(&self) -> String {
-        "DnD stuff server".to_owned()
-    }
+    // Exit when the window closes
+    std::process::exit(0);
+}
+
+fn build() -> impl Widget<Gui> {
+    let label = Label::new(|data: &Gui, _env: &Env| "Test".to_string());
+
+    Align::centered(label)
 }
