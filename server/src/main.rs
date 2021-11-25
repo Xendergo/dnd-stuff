@@ -4,15 +4,11 @@ use gui::Gui;
 use iced::{Sandbox, Settings};
 use tiny_http::{Response, Server};
 
-// use crate::gui::create_window;
-// #[macro_use] extern crate rocket;
-
 extern crate tiny_http;
 
 mod gui;
 mod utils;
 
-// #[launch]
 fn main() -> iced::Result {
     thread::spawn(|| {
         let server = Server::http("0.0.0.0:8000").unwrap();
@@ -29,11 +25,5 @@ fn main() -> iced::Result {
         }
     });
     
-    // rocket::build().mount("/", routes! [ test ])
     Gui::run(Settings::default())
 }
-
-// #[get("/")]
-// fn test() -> &'static str {
-//     "test"
-// }
