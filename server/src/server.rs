@@ -18,7 +18,7 @@ pub struct Server {
 }
 
 #[derive(Debug, Clone, Copy)]
-enum ServerCommand {
+pub enum ServerCommand {
     SwitchPort { port: u32 },
     Restart,
     Stop,
@@ -56,6 +56,10 @@ impl Server {
             rx: self.rx.clone(),
             runtime: Arc::clone(&self.runtime),
         })
+    }
+
+    pub fn send(&self, command: ServerCommand) {
+        self.tx.send(command).ok();
     }
 }
 
@@ -117,8 +121,10 @@ fn run_server(rx: Receiver<ServerCommand>, tx: Sender<ServerStatus>) {
                 ServerCommand::SwitchPort { port: new_port } => {
                     port = new_port;
                 },
-                Restart => {
+                ServerCommand::Restart => {
                     tx.send(ServerStatus::Restarting).ok();
+
+                    server = None;
     
                     let maybe_server = HttpServer::http(format!("0.0.0.0:{}", port));
     
