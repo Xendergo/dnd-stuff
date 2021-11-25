@@ -1,5 +1,5 @@
 use std::path::PathBuf;
-use std::net::UdpSocket;
+use std::net::{IpAddr, UdpSocket};
 
 pub fn get_data_dir() -> PathBuf {
     dirs::data_dir()
@@ -8,7 +8,7 @@ pub fn get_data_dir() -> PathBuf {
 }
 
 // https://github.com/egmkang/local_ipaddress/blob/master/src/lib.rs
-pub fn get_local_ip() -> Option<String> {
+pub fn get_local_ip() -> Option<IpAddr> {
     let socket = match UdpSocket::bind("0.0.0.0:0") {
         Ok(s) => s,
         Err(_) => return None,
@@ -21,7 +21,7 @@ pub fn get_local_ip() -> Option<String> {
     };
 
     match socket.local_addr() {
-        Ok(addr) => return Some(addr.ip().to_string()),
+        Ok(addr) => return Some(addr.ip()),
         Err(_) => return None,
     };
 }
