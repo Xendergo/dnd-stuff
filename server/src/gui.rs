@@ -20,7 +20,6 @@ struct Widgets {
 
 #[derive(Debug, Clone)]
 pub enum Message {
-    None,
     ServerStatus(ServerStatus),
     ServerCommand(ServerCommand),
 }
@@ -30,7 +29,7 @@ impl Application for Gui {
     type Executor = executor::Default;
     type Flags = ();
 
-    fn new(flags: ()) -> (Gui, Command<Message>) {
+    fn new(_flags: ()) -> (Gui, Command<Message>) {
         let runtime = Arc::new(
             tokio::runtime::Builder::new_multi_thread()
                 .worker_threads(1)
@@ -58,7 +57,7 @@ impl Application for Gui {
         "DnD stuff".to_string()
     }
 
-    fn update(&mut self, message: Self::Message, clipboard: &mut Clipboard) -> Command<Message> {
+    fn update(&mut self, message: Self::Message, _clipboard: &mut Clipboard) -> Command<Message> {
         match message {
             Message::ServerStatus(status) => {
                 self.server_status = status;
@@ -66,7 +65,6 @@ impl Application for Gui {
             Message::ServerCommand(command) => {
                 self.server.send(command);
             }
-            Message::None => {}
         }
 
         Command::none()

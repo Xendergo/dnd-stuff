@@ -1,24 +1,19 @@
 use std::{
-    convert::Infallible,
     hash::{Hash, Hasher},
-    net::{IpAddr, SocketAddr},
+    net::IpAddr,
     sync::{
         atomic::{AtomicU32, Ordering},
         Arc,
     },
 };
 
-use hyper::{server::Server as HttpServer, service, Body, Request, Response};
 use iced::{futures::stream::BoxStream, Subscription};
 use iced_native::subscription::Recipe;
 
 use tokio::sync::{mpsc, watch};
 use tokio::{runtime::Runtime, sync::oneshot};
 
-use crate::{
-    gui::Message,
-    utils::{await_option, get_local_ip},
-};
+use crate::{gui::Message, server::server::start_server, utils::await_option};
 
 static ID: AtomicU32 = AtomicU32::new(0);
 
@@ -132,7 +127,7 @@ async fn run_server(
                         tx.send(ServerStatus::Restarting).ok();
 
                         if let Some(canceller) = server_canceller {
-                            canceller.send(());
+                            canceller.send(()).ok();
                         }
 
                         let (canceller, cancel_signal) = oneshot::channel();
@@ -147,7 +142,7 @@ async fn run_server(
                     }
                     ServerCommand::Stop => {
                         if let Some(canceller) = server_canceller {
-                            canceller.send(());
+                            canceller.send(()).ok();
                             server_canceller = None;
                         }
                     }
@@ -161,49 +156,10 @@ async fn run_server(
                     None => break,
                 };
 
-                tx.send(status);
+                tx.send(status).ok();
             }
         }
     }
-}
-
-async fn start_server(
-    port: u16,
-    cancel_signal: oneshot::Receiver<()>,
-    status_sender: mpsc::UnboundedSender<ServerStatus>,
-) {
-    println!("Starting server");
-    let addr = SocketAddr::from(([0, 0, 0, 0], port));
-
-    // And a MakeService to handle each connection...
-    let make_service = service::make_service_fn(|_conn| async {
-        Ok::<_, Infallible>(service::service_fn(handle))
-    });
-
-    // Then bind and serve...
-    let server = HttpServer::bind(&addr).serve(make_service);
-
-    let graceful = server.with_graceful_shutdown(async {
-        cancel_signal.await.ok();
-    });
-
-    match get_local_ip() {
-        Some(ip) => status_sender.send(ServerStatus::Online { ip }),
-        None => status_sender.send(ServerStatus::OnlineNoIp),
-    };
-
-    // And run forever...
-    if let Err(e) = graceful.await {
-        eprintln!("server error: {}", e);
-        status_sender.send(ServerStatus::Err);
-        return;
-    }
-
-    status_sender.send(ServerStatus::Offline);
-}
-
-async fn handle(_req: Request<Body>) -> Result<Response<Body>, Infallible> {
-    Ok(Response::new(Body::from("Not cached")))
 }
 
 impl Drop for Server {
