@@ -8,6 +8,7 @@ use crate::server::{Server, ServerCommand, ServerStatus};
 
 use self::InputChanged::*;
 use crate::server::ServerStatus::*;
+use crate::styling::{self, PADDING};
 use Message::*;
 use ServerCommand::*;
 
@@ -84,7 +85,7 @@ impl Application for Gui {
             InputChanged(input) => match input {
                 PortNumber(number) => {
                     self.server.send(SwitchPort {
-                        port: number.parse().unwrap_or(0),
+                        port: number.parse().unwrap_or(8000),
                     });
 
                     self.widgets.port_number = number;
@@ -109,6 +110,8 @@ impl Application for Gui {
                 }),
             )
             .on_press(ServerCommand(Restart))
+            .padding(PADDING)
+            .style(styling::Button())
             .into(),
         );
 
@@ -116,6 +119,8 @@ impl Application for Gui {
             server_options.push(
                 Button::new(&mut self.widgets.stop_server, Text::new("Stop"))
                     .on_press(ServerCommand(Stop))
+                    .padding(PADDING)
+                    .style(styling::Button())
                     .into(),
             );
         }
@@ -137,6 +142,9 @@ impl Application for Gui {
                     }
                 },
             )
+            .width(Length::Units(12 * 5))
+            .padding(PADDING)
+            .style(styling::TextInput())
             .into(),
         );
 
@@ -153,8 +161,9 @@ impl Application for Gui {
             ))
             .color(Color::WHITE)
             .into(),
-            Row::with_children(server_options).into(),
+            Row::with_children(server_options).spacing(16).into(),
         ])
+        .spacing(16)
         .align_items(Align::Center)
         .width(Length::Fill)
         .height(Length::Fill)
