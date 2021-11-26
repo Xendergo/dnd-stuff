@@ -6,6 +6,11 @@ use tokio::runtime::Runtime;
 
 use crate::server::{Server, ServerCommand, ServerStatus};
 
+use self::InputChanged::*;
+use crate::server::ServerStatus::*;
+use Message::*;
+use ServerCommand::*;
+
 pub struct Gui {
     server_status: ServerStatus,
     server: Server,
@@ -16,12 +21,22 @@ pub struct Gui {
 #[derive(Default)]
 struct Widgets {
     restart_server: button::State,
+    stop_server: button::State,
+    port: text_input::State,
+    port_number: String,
+}
+
+#[derive(Debug, Clone)]
+pub enum InputChanged {
+    PortNumber(String),
 }
 
 #[derive(Debug, Clone)]
 pub enum Message {
+    None,
     ServerStatus(ServerStatus),
     ServerCommand(ServerCommand),
+    InputChanged(InputChanged),
 }
 
 impl Application for Gui {
@@ -32,7 +47,6 @@ impl Application for Gui {
     fn new(_flags: ()) -> (Gui, Command<Message>) {
         let runtime = Arc::new(
             tokio::runtime::Builder::new_multi_thread()
-                .worker_threads(1)
                 .enable_all()
                 .build()
                 .unwrap(),
@@ -59,12 +73,25 @@ impl Application for Gui {
 
     fn update(&mut self, message: Self::Message, _clipboard: &mut Clipboard) -> Command<Message> {
         match message {
-            Message::ServerStatus(status) => {
+            ServerStatus(status) => {
                 self.server_status = status;
             }
-            Message::ServerCommand(command) => {
+
+            ServerCommand(command) => {
                 self.server.send(command);
             }
+
+            InputChanged(input) => match input {
+                PortNumber(number) => {
+                    self.server.send(SwitchPort {
+                        port: number.parse().unwrap_or(0),
+                    });
+
+                    self.widgets.port_number = number;
+                }
+            },
+
+            None => {}
         }
 
         Command::none()
@@ -77,11 +104,39 @@ impl Application for Gui {
             Button::new(
                 &mut self.widgets.restart_server,
                 Text::new(match self.server_status {
-                    ServerStatus::Offline => "Start",
+                    Offline => "Start",
                     _ => "Restart",
                 }),
             )
-            .on_press(Message::ServerCommand(ServerCommand::Restart))
+            .on_press(ServerCommand(Restart))
+            .into(),
+        );
+
+        if let Online { ip: _ } | OnlineNoIp = self.server_status {
+            server_options.push(
+                Button::new(&mut self.widgets.stop_server, Text::new("Stop"))
+                    .on_press(ServerCommand(Stop))
+                    .into(),
+            );
+        }
+
+        server_options.push(
+            TextInput::new(
+                &mut self.widgets.port,
+                "Port",
+                &self.widgets.port_number.to_string(),
+                |port| {
+                    let filtered = port
+                        .trim_matches(|char: char| !char.is_ascii_digit())
+                        .to_owned();
+
+                    if filtered.parse::<u16>().is_ok() || filtered == "" {
+                        InputChanged(PortNumber(filtered))
+                    } else {
+                        None
+                    }
+                },
+            )
             .into(),
         );
 
@@ -89,12 +144,11 @@ impl Application for Gui {
             Text::new(format!(
                 "Server status: {}",
                 match &self.server_status {
-                    ServerStatus::Offline => "Offline".to_owned(),
-                    ServerStatus::Restarting => "Restarting".to_owned(),
-                    ServerStatus::OnlineNoIp => "Online, couldn't get local IP address".to_owned(),
-                    ServerStatus::Online { ip } =>
-                        format!("Online, your local IP address is {}", ip),
-                    ServerStatus::Err => "The server threw an error".to_owned(),
+                    Offline => "Offline".to_owned(),
+                    Restarting => "Restarting".to_owned(),
+                    OnlineNoIp => "Online, couldn't get local IP address".to_owned(),
+                    Online { ip } => format!("Online, your local IP address is {}", ip),
+                    Err => "The server threw an error".to_owned(),
                 }
             ))
             .color(Color::WHITE)

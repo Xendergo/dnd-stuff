@@ -150,7 +150,7 @@ async fn run_server(
                 }
             }
 
-        Some(maybe_status) = await_option(status_receiver.as_mut().map(|v| v.recv())) => {
+            Some(maybe_status) = await_option(status_receiver.as_mut().map(|v| v.recv())) => {
                 let status = match maybe_status {
                     Some(v) => v,
                     None => break,
