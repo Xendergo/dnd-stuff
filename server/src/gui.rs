@@ -1,7 +1,7 @@
 use std::sync::Arc;
 
-use iced_native::{Renderer, widget::*};
-use iced::{Align, Application, Clipboard, Color, Column, Command, Element, Length, Subscription, executor};
+use iced::{executor, Align, Application, Clipboard, Color, Column, Command, Length, Subscription};
+use iced_native::widget::*;
 use tokio::runtime::Runtime;
 
 use crate::server::{Server, ServerCommand, ServerStatus};
@@ -10,7 +10,7 @@ pub struct Gui {
     server_status: ServerStatus,
     server: Server,
     runtime: Arc<Runtime>,
-    widgets: Widgets
+    widgets: Widgets,
 }
 
 #[derive(Default)]
@@ -31,18 +31,23 @@ impl Application for Gui {
     type Flags = ();
 
     fn new(flags: ()) -> (Gui, Command<Message>) {
-        let runtime = Arc::new(tokio::runtime::Builder::new_multi_thread()
-            .worker_threads(1)
-            .enable_all()
-            .build()
-            .unwrap());
+        let runtime = Arc::new(
+            tokio::runtime::Builder::new_multi_thread()
+                .worker_threads(1)
+                .enable_all()
+                .build()
+                .unwrap(),
+        );
 
-        (Gui {
-            server_status: ServerStatus::Offline,
-            server: Server::new(Arc::clone(&runtime)),
-            runtime,
-            widgets: Widgets::default()
-        }, Command::none())
+        (
+            Gui {
+                server_status: ServerStatus::Offline,
+                server: Server::new(Arc::clone(&runtime)),
+                runtime,
+                widgets: Widgets::default(),
+            },
+            Command::none(),
+        )
     }
 
     fn subscription(&self) -> Subscription<Self::Message> {
@@ -55,8 +60,12 @@ impl Application for Gui {
 
     fn update(&mut self, message: Self::Message, clipboard: &mut Clipboard) -> Command<Message> {
         match message {
-            Message::ServerStatus(status) => { self.server_status = status; },
-            Message::ServerCommand(command) => { self.server.send(command); },
+            Message::ServerStatus(status) => {
+                self.server_status = status;
+            }
+            Message::ServerCommand(command) => {
+                self.server.send(command);
+            }
             Message::None => {}
         }
 
@@ -67,32 +76,33 @@ impl Application for Gui {
         let mut server_options: Vec<iced::Element<'_, Self::Message>> = Vec::new();
 
         server_options.push(
-            Button::new(&mut self.widgets.restart_server,
-                Text::new(
-                        match self.server_status {
-                        ServerStatus::Offline => "Start",
-                        _ => "Restart"
-                    }
-                )
+            Button::new(
+                &mut self.widgets.restart_server,
+                Text::new(match self.server_status {
+                    ServerStatus::Offline => "Start",
+                    _ => "Restart",
+                }),
             )
             .on_press(Message::ServerCommand(ServerCommand::Restart))
-            .into()
+            .into(),
         );
 
-        Column::with_children(
-            vec! [
-                Text::new(
-                    format!("Server status: {}", match &self.server_status {
-                        ServerStatus::Offline => "Offline".to_owned(),
-                        ServerStatus::Restarting => "Restarting".to_owned(),
-                        ServerStatus::OnlineNoIp => "Online, couldn't get local IP address".to_owned(),
-                        ServerStatus::Online { ip } => format!("Online, your local IP address is {}", ip),
-                        ServerStatus::Err => "The server threw an error".to_owned(),
-                    })
-                ).color(Color::WHITE).into(),
-                Row::with_children(server_options).into()
-            ]
-        )
+        Column::with_children(vec![
+            Text::new(format!(
+                "Server status: {}",
+                match &self.server_status {
+                    ServerStatus::Offline => "Offline".to_owned(),
+                    ServerStatus::Restarting => "Restarting".to_owned(),
+                    ServerStatus::OnlineNoIp => "Online, couldn't get local IP address".to_owned(),
+                    ServerStatus::Online { ip } =>
+                        format!("Online, your local IP address is {}", ip),
+                    ServerStatus::Err => "The server threw an error".to_owned(),
+                }
+            ))
+            .color(Color::WHITE)
+            .into(),
+            Row::with_children(server_options).into(),
+        ])
         .align_items(Align::Center)
         .width(Length::Fill)
         .height(Length::Fill)

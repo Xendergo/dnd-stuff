@@ -1,5 +1,6 @@
-use std::path::PathBuf;
+use std::future::Future;
 use std::net::{IpAddr, UdpSocket};
+use std::path::PathBuf;
 
 pub fn get_data_dir() -> PathBuf {
     dirs::data_dir()
@@ -24,4 +25,11 @@ pub fn get_local_ip() -> Option<IpAddr> {
         Ok(addr) => return Some(addr.ip()),
         Err(_) => return None,
     };
+}
+
+pub async fn await_option<T>(v: Option<impl Future<Output = T>>) -> Option<T> {
+    match v {
+        Some(v) => Some(v.await),
+        None => None,
+    }
 }
