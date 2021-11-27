@@ -138,7 +138,7 @@ async fn run_server(
 
                         status_receiver = Some(status_rx);
 
-                        runtime.spawn(start_server(port, cancel_signal, status_tx));
+                        runtime.spawn(start_server(port, cancel_signal, status_tx, Arc::clone(&runtime)));
                     }
                     ServerCommand::Stop => {
                         if let Some(canceller) = server_canceller {

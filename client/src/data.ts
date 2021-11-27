@@ -16,3 +16,9 @@ Object.keys(campaigns_gming_raw).forEach(key => {
 export let CAMPAIGNS_GMING = new Store(campaigns_gming, data =>
     localStorage.setItem("campaigns_gming", JSON.stringify(data))
 )
+
+let ip = sessionStorage.getItem("ip")
+
+export let IP_ADDRESS = new Store(ip === "" ? null : ip, data =>
+    sessionStorage.setItem("ip", data)
+)

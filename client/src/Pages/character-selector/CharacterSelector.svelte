@@ -1,10 +1,13 @@
 <script lang="ts">
-    import { CAMPAIGNS_GMING, urlParams } from "../../data"
+    import { CAMPAIGNS_GMING, IP_ADDRESS, urlParams } from "../../data"
 
     import { characters } from "../../characters"
+    import { connect } from "../../server-interface"
 
     let IS_GM = urlParams.get("gm") === "true"
     let CAMPAIGN_NAME: string | null = urlParams.get("campaign") ?? null
+
+    let tmp_ip_address = ""
 </script>
 
 <main>
@@ -71,6 +74,16 @@
     {:else}
         <button id="gm-button" on:click={() => (IS_GM = false)}
             >I'm not the GM</button
+        >
+    {/if}
+
+    {#if $IP_ADDRESS === null}
+        <input placeholder="Game IP" bind:value={tmp_ip_address} />
+        <button
+            on:click={() => {
+                $IP_ADDRESS = tmp_ip_address
+                connect()
+            }}>Join</button
         >
     {/if}
 </main>
