@@ -27,6 +27,17 @@ export let IS_GM = new Store(sessionStorage.getItem("gm") === "true", v =>
     sessionStorage.setItem("gm", v === true ? "true" : "false")
 )
 
+export let SERVER_ID = new Store(
+    sessionStorage.getItem("server_id") ?? null,
+    v => {
+        if (v === null) {
+            sessionStorage.removeItem("server_id")
+        } else {
+            sessionStorage.setItem("server_id", v)
+        }
+    }
+)
+
 export let CAMPAIGN_NAME = urlParams.get("campaign") ?? null
 
 export let CHARACTER_NAME = urlParams.get("character") ?? null

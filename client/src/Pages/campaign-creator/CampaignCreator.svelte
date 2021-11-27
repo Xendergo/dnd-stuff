@@ -15,7 +15,7 @@
                     if ($CAMPAIGNS[name] === undefined) {
                         $CAMPAIGNS[name] = []
 
-                        location.href = `../?gm=true&campaign=${name}`
+                        location.href = `../campaign=${name}`
                     } else {
                         error = "You're already GMing a campaign with that name"
                     }

@@ -3,7 +3,7 @@ use std::sync::Arc;
 use iced::{executor, Align, Application, Clipboard, Color, Column, Command, Length, Subscription};
 use iced_native::widget::*;
 
-use crate::server::{Server, ServerCommand, ServerStatus};
+use crate::server::{Server, ServerCommand, ServerMessage, ServerStatus};
 
 use self::InputChanged::*;
 use crate::server::ServerStatus::*;
@@ -43,6 +43,9 @@ pub enum Message {
 
     /// Update the value of one of the inputs
     InputChanged(InputChanged),
+
+    /// A message was received from the server
+    ServerMessage(ServerMessage),
 }
 
 impl Application for Gui {
@@ -97,6 +100,10 @@ impl Application for Gui {
                 }
             },
 
+            ServerMessage(msg) => {
+                println!("GUI told about new connection (poggers)")
+            }
+
             None => {}
         }
 
@@ -113,7 +120,7 @@ impl Application for Gui {
                     Restarting => "Restarting".to_owned(),
                     OnlineNoIp => "Online, couldn't get local IP address".to_owned(),
                     Online { ip } => format!("Online, your local IP address is {}", ip),
-                    Err => "The server threw an error".to_owned(),
+                    Error => "The server threw an error".to_owned(),
                 }
             ))
             .color(Color::WHITE)

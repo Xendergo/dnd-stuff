@@ -1,33 +1,51 @@
-use std::{net::SocketAddr, sync::Arc};
+use std::{convert::Infallible, net::SocketAddr, sync::Arc};
 
-use hyper::{service, Body, Request, Response, Server};
+use hyper::{service, upgrade::Upgraded, Body, Request, Response, Server};
 use hyper_tungstenite::{
     tungstenite::{Error, Message},
-    HyperWebsocket,
+    HyperWebsocket, WebSocketStream,
 };
 use iced::futures::{SinkExt, StreamExt};
 use tokio::{
     runtime::Runtime,
-    sync::{mpsc, oneshot},
+    sync::{
+        mpsc::{self, UnboundedSender},
+        oneshot,
+    },
 };
 
-use crate::{server::ServerStatus, utils::get_local_ip};
+use serde::{Deserialize, Serialize};
+
+use crate::utils::get_local_ip;
+
+use super::{
+    ServerMessage::{self, *},
+    ServerStatus::*,
+};
+
+use ClientMessage::*;
 
 pub(super) async fn start_server(
     port: u16,
     cancel_signal: oneshot::Receiver<()>,
-    status_sender: mpsc::UnboundedSender<ServerStatus>,
+    signal_sender: mpsc::UnboundedSender<ServerMessage>,
     runtime: Arc<Runtime>,
 ) {
     println!("Starting server");
     let addr = SocketAddr::from(([0, 0, 0, 0], port));
 
-    // Enter the tokio runtime, the runtime can't get sent in a closure to the request handler because of lifetime issues
-    let guard = runtime.handle().enter();
+    let cloned_signal_sender = signal_sender.clone();
 
     // Register the request handler
-    let make_service = service::make_service_fn(|_conn| async {
-        Ok::<_, Error>(service::service_fn(handle_request))
+    let make_service = service::make_service_fn(move |_conn| {
+        let runtime = Arc::clone(&runtime);
+        let signal_sender = signal_sender.clone();
+
+        let service = service::service_fn(move |req| {
+            handle_request(req, Arc::clone(&runtime), signal_sender.clone())
+        });
+
+        async move { Ok::<_, Infallible>(service) }
     });
 
     let server = Server::bind(&addr).serve(make_service);
@@ -38,8 +56,8 @@ pub(super) async fn start_server(
     });
 
     match get_local_ip() {
-        Some(ip) => status_sender.send(ServerStatus::Online { ip }),
-        None => status_sender.send(ServerStatus::OnlineNoIp),
+        Some(ip) => cloned_signal_sender.send(Status(Online { ip })),
+        None => cloned_signal_sender.send(Status(OnlineNoIp)),
     }
     .ok();
 
@@ -47,28 +65,29 @@ pub(super) async fn start_server(
     match graceful.await {
         Ok(_) => {
             println!("Server stopped");
-            status_sender.send(ServerStatus::Offline).ok();
+            cloned_signal_sender.send(Status(Offline)).ok();
         }
 
         Err(e) => {
             eprintln!("Server errored: {}", e);
-            status_sender.send(ServerStatus::Err).ok();
+            cloned_signal_sender.send(Status(Error)).ok();
         }
     }
-
-    // Stay in the tokio runtime until the server is closed instead of exiting immediately
-    drop(guard)
 }
 
 /// Handle requests sent to the server
-async fn handle_request(request: Request<Body>) -> Result<Response<Body>, Error> {
+async fn handle_request(
+    request: Request<Body>,
+    runtime: Arc<Runtime>,
+    signal_sender: UnboundedSender<ServerMessage>,
+) -> Result<Response<Body>, Error> {
     if hyper_tungstenite::is_upgrade_request(&request) {
         println!("Received upgrade request");
         let (response, websocket) = hyper_tungstenite::upgrade(request, None)?;
 
         // Spawn a task to handle the websocket connection.
-        tokio::spawn(async move {
-            if let Err(e) = serve_websocket(websocket).await {
+        runtime.spawn(async move {
+            if let Err(e) = serve_websocket(websocket, signal_sender.clone()).await {
                 eprintln!("Error in websocket connection: {}", e);
             }
         });
@@ -79,31 +98,50 @@ async fn handle_request(request: Request<Body>) -> Result<Response<Body>, Error>
     Ok(Response::new(Body::from("Hello HTTP!")))
 }
 
+#[derive(Debug, Serialize, Deserialize)]
+enum ClientMessage {
+    Id(Option<u32>),
+}
+
 /// Manage a websocket connection
-async fn serve_websocket(websocket: HyperWebsocket) -> Result<(), Error> {
+async fn serve_websocket(
+    websocket: HyperWebsocket,
+    signal_sender: UnboundedSender<ServerMessage>,
+) -> Result<(), Error> {
     println!("Websocket successfully connected");
+
     let mut websocket = websocket.await?;
+
+    let mut id: Option<u32> = None;
+
     while let Some(message) = websocket.next().await {
         match message? {
-            Message::Text(msg) => {
-                println!("Received text message: {}", msg);
-                websocket
-                    .send(Message::text("Thank you, come again."))
-                    .await?;
+            Message::Text(msg_raw) => {
+                println!("{:?}", msg_raw);
+                let msg: ClientMessage = match serde_json::from_str(&msg_raw) {
+                    Ok(v) => v,
+                    Err(_) => continue,
+                };
+
+                match msg {
+                    Id(v) => {
+                        if id.is_some() {
+                            continue;
+                        }
+
+                        match v {
+                            Some(v) => id = Some(v),
+                            None => {
+                                id = Some(rand::random());
+                                send(&mut websocket, Id(id)).await?;
+                            }
+                        }
+
+                        signal_sender.send(NewConnection { id: id.unwrap() }).ok();
+                    }
+                }
             }
-            Message::Binary(msg) => {
-                println!("Received binary message: {:02X?}", msg);
-                websocket
-                    .send(Message::binary(b"Thank you, come again.".to_vec()))
-                    .await?;
-            }
-            Message::Ping(msg) => {
-                // No need to send a reply: tungstenite takes care of this for you.
-                println!("Received ping message: {:02X?}", msg);
-            }
-            Message::Pong(msg) => {
-                println!("Received pong message: {:02X?}", msg);
-            }
+
             Message::Close(msg) => {
                 // No need to send a reply: tungstenite takes care of this for you.
                 if let Some(msg) = &msg {
@@ -115,8 +153,29 @@ async fn serve_websocket(websocket: HyperWebsocket) -> Result<(), Error> {
                     println!("Received close message");
                 }
             }
+
+            _ => {}
         }
     }
 
     Ok(())
 }
+
+async fn send(
+    websocket: &mut WebSocketStream<Upgraded>,
+    message: ClientMessage,
+) -> Result<(), Error> {
+    websocket
+        .send(Message::Text(serde_json::to_string(&message).unwrap()))
+        .await
+}
+
+// #[cfg(test)]
+// mod tests {
+//     use super::ClientMessage::*;
+
+//     #[test]
+//     fn bruh() {
+//         println!("{:?}", serde_json::to_string(&Id(None)));
+//     }
+// }

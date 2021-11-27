@@ -1,25 +1,20 @@
 use std::{
     hash::{Hash, Hasher},
     net::IpAddr,
-    sync::{
-        atomic::{AtomicU32, Ordering},
-        Arc,
-    },
+    sync::Arc,
 };
 
 use iced::{futures::stream::BoxStream, Subscription};
 use iced_native::subscription::Recipe;
 
-use tokio::sync::{mpsc, watch};
+use tokio::sync::{broadcast, mpsc, watch};
 use tokio::{runtime::Runtime, sync::oneshot};
 
 use crate::{gui::Message, server::server::start_server, utils::await_option};
 
-/// The id for ServerSubscriptions, I don't expect there to be more than one, but this is just here for correctness
-static ID: AtomicU32 = AtomicU32::new(0);
-
 pub struct Server {
     status: watch::Receiver<ServerStatus>,
+    server_message_tx: broadcast::Sender<ServerMessage>, // The tx needs to be stored since you have to have the tx to make more rx
     tx: mpsc::UnboundedSender<ServerCommand>,
 }
 
@@ -37,7 +32,13 @@ pub enum ServerStatus {
     OnlineNoIp,
     Restarting,
     Offline,
-    Err,
+    Error,
+}
+
+#[derive(Debug, Clone)]
+pub enum ServerMessage {
+    Status(ServerStatus),
+    NewConnection { id: u32 },
 }
 
 impl Server {
@@ -45,17 +46,28 @@ impl Server {
     pub fn new(runtime: Arc<Runtime>) -> Server {
         let (tx, server_rx) = mpsc::unbounded_channel();
         let (server_tx, rx) = watch::channel(ServerStatus::Offline);
+        let (server_message_tx, _) = broadcast::channel(32);
 
-        runtime.spawn(run_server(Arc::clone(&runtime), server_rx, server_tx));
+        runtime.spawn(run_server(
+            Arc::clone(&runtime),
+            server_rx,
+            server_tx,
+            server_message_tx.clone(),
+        ));
 
-        Server { status: rx, tx }
+        Server {
+            status: rx,
+            tx,
+            server_message_tx,
+        }
     }
 
     /// Create a subscription to the server's status
     pub fn subscription(&self) -> Subscription<Message> {
         Subscription::from_recipe(ServerSubscription {
-            id: ID.fetch_add(1, Ordering::Relaxed),
+            id: rand::random(),
             status: self.status.clone(),
+            server_messages: self.server_message_tx.subscribe(),
         })
     }
 
@@ -69,6 +81,7 @@ impl Server {
 struct ServerSubscription {
     id: u32,
     status: watch::Receiver<ServerStatus>,
+    server_messages: broadcast::Receiver<ServerMessage>,
 }
 
 /// A Recipe is iced's way of letting you tell the GUI about changes to background tasks
@@ -90,13 +103,21 @@ impl<H: Hasher, I> Recipe<H, I> for ServerSubscription {
         Box::pin(iced_futures::futures::stream::unfold(
             self,
             move |mut server| async move {
-                if let Err(_) = server.status.changed().await {
-                    return None;
-                }
+                let message = tokio::select! {
+                    Ok(_) = server.status.changed() => {
+                        let status = *server.status.borrow();
 
-                let status = *server.status.borrow();
+                        Message::ServerStatus(status)
+                    }
 
-                Some((Message::ServerStatus(status), server))
+                    Ok(msg) = server.server_messages.recv() => {
+                        Message::ServerMessage(msg)
+                    }
+
+                    else => Message::None
+                };
+
+                Some((message, server))
             },
         ))
     }
@@ -108,18 +129,19 @@ impl<H: Hasher, I> Recipe<H, I> for ServerSubscription {
 async fn run_server(
     runtime: Arc<Runtime>,
     mut rx: mpsc::UnboundedReceiver<ServerCommand>,
-    tx: watch::Sender<ServerStatus>,
+    status_sender: watch::Sender<ServerStatus>,
+    server_message_sender: broadcast::Sender<ServerMessage>,
 ) {
     println!("Starting server thread");
 
-    tx.send(ServerStatus::Offline).ok();
+    status_sender.send(ServerStatus::Offline).ok();
 
     let mut port: u16 = 8000;
 
     // A oneshot that when a value is transmitted, stops the server
     let mut server_canceller: Option<oneshot::Sender<()>> = None;
 
-    let mut status_receiver: Option<mpsc::UnboundedReceiver<ServerStatus>> = None;
+    let mut signal_receiver: Option<mpsc::UnboundedReceiver<ServerMessage>> = None;
 
     loop {
         // Wait for either receiving a command, or receiving an update to the server's status
@@ -136,7 +158,7 @@ async fn run_server(
                     }
 
                     ServerCommand::Restart => {
-                        tx.send(ServerStatus::Restarting).ok();
+                        status_sender.send(ServerStatus::Restarting).ok();
 
                         if let Some(canceller) = server_canceller {
                             canceller.send(()).ok();
@@ -148,7 +170,7 @@ async fn run_server(
 
                         let (status_tx, status_rx) = mpsc::unbounded_channel();
 
-                        status_receiver = Some(status_rx);
+                        signal_receiver = Some(status_rx);
 
                         runtime.spawn(start_server(port, cancel_signal, status_tx, Arc::clone(&runtime)));
                     }
@@ -164,13 +186,18 @@ async fn run_server(
                 }
             }
 
-            Some(maybe_status) = await_option(status_receiver.as_mut().map(|v| v.recv())) => {
-                let status = match maybe_status {
+            Some(maybe_signal) = await_option(signal_receiver.as_mut().map(|v| v.recv())) => {
+                let signal = match maybe_signal {
                     Some(v) => v,
                     None => break,
                 };
 
-                tx.send(status).ok();
+                match signal {
+                    ServerMessage::Status(status) => {
+                        status_sender.send(status).ok();
+                    },
+                    v => {server_message_sender.send(v).ok();},
+                }
             }
         }
     }

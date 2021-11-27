@@ -1,11 +1,5 @@
 import { Store } from "./better-store"
-import {
-    CAMPAIGNS,
-    CAMPAIGN_NAME,
-    CHARACTER_NAME,
-    IP_ADDRESS,
-    IS_GM,
-} from "./data"
+import { CAMPAIGNS, CAMPAIGN_NAME, IP_ADDRESS, SERVER_ID } from "./data"
 
 let socket: WebSocket | null = null
 
@@ -15,6 +9,14 @@ export function connect() {
     }`
 
     socket = new WebSocket(address)
+
+    socket.onopen = () => {
+        if (SERVER_ID.value === null) {
+            socket.send(`{"Id": null}`)
+        } else {
+            socket.send(`{"Id": ${SERVER_ID.value}`)
+        }
+    }
 }
 
 if (IP_ADDRESS.value) {
