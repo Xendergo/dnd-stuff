@@ -67,25 +67,32 @@
         {/if}
     </table>
 
-    {#if !IS_GM}
-        <button id="gm-button" on:click={() => (IS_GM = true)}
-            >I'm the GM</button
-        >
-    {:else}
-        <button id="gm-button" on:click={() => (IS_GM = false)}
-            >I'm not the GM</button
-        >
-    {/if}
+    <div id="bottom-row">
+        {#if $IP_ADDRESS === null}
+            <input
+                id="ip-input"
+                placeholder="Game IP"
+                bind:value={tmp_ip_address}
+            />
+            <button
+                id="join-button"
+                on:click={() => {
+                    $IP_ADDRESS = tmp_ip_address
+                    connect()
+                }}>Join</button
+            >
+        {/if}
 
-    {#if $IP_ADDRESS === null}
-        <input placeholder="Game IP" bind:value={tmp_ip_address} />
-        <button
-            on:click={() => {
-                $IP_ADDRESS = tmp_ip_address
-                connect()
-            }}>Join</button
-        >
-    {/if}
+        {#if !IS_GM}
+            <button id="gm-button" on:click={() => (IS_GM = true)}
+                >I'm the GM</button
+            >
+        {:else}
+            <button id="gm-button" on:click={() => (IS_GM = false)}
+                >I'm not the GM</button
+            >
+        {/if}
+    </div>
 </main>
 
 <style>
@@ -116,9 +123,24 @@
         margin-right: auto;
     }
 
-    #gm-button {
+    #bottom-row {
         position: fixed;
+        left: 16px;
         right: 16px;
         bottom: 16px;
+
+        text-align: center;
+    }
+
+    #ip-input {
+        float: left;
+    }
+
+    #join-button {
+        float: left;
+    }
+
+    #gm-button {
+        float: right;
     }
 </style>
