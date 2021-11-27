@@ -2,7 +2,6 @@ use std::sync::Arc;
 
 use iced::{executor, Align, Application, Clipboard, Color, Column, Command, Length, Subscription};
 use iced_native::widget::*;
-use tokio::runtime::Runtime;
 
 use crate::server::{Server, ServerCommand, ServerStatus};
 
@@ -15,7 +14,6 @@ use ServerCommand::*;
 pub struct Gui {
     server_status: ServerStatus,
     server: Server,
-    runtime: Arc<Runtime>,
     widgets: Widgets,
 }
 
@@ -34,9 +32,16 @@ pub enum InputChanged {
 
 #[derive(Debug, Clone)]
 pub enum Message {
+    /// Do nothing
     None,
+
+    /// Sent by the server when its status changes
     ServerStatus(ServerStatus),
+
+    /// Tell the server to do something
     ServerCommand(ServerCommand),
+
+    /// Update the value of one of the inputs
     InputChanged(InputChanged),
 }
 
@@ -57,13 +62,13 @@ impl Application for Gui {
             Gui {
                 server_status: ServerStatus::Offline,
                 server: Server::new(Arc::clone(&runtime)),
-                runtime,
                 widgets: Widgets::default(),
             },
             Command::none(),
         )
     }
 
+    /// Subscribe to the server's status
     fn subscription(&self) -> Subscription<Self::Message> {
         self.server.subscription()
     }
@@ -99,9 +104,46 @@ impl Application for Gui {
     }
 
     fn view(&mut self) -> iced::Element<'_, Self::Message> {
-        let mut server_options: Vec<iced::Element<'_, Self::Message>> = Vec::new();
+        Column::with_children(vec![
+            // Display the server status
+            Text::new(format!(
+                "Server status: {}",
+                match &self.server_status {
+                    Offline => "Offline".to_owned(),
+                    Restarting => "Restarting".to_owned(),
+                    OnlineNoIp => "Online, couldn't get local IP address".to_owned(),
+                    Online { ip } => format!("Online, your local IP address is {}", ip),
+                    Err => "The server threw an error".to_owned(),
+                }
+            ))
+            .color(Color::WHITE)
+            .into(),
+            // The row of server interactions
+            Row::with_children(self.server_interactions())
+                .spacing(16)
+                .into(),
+        ])
+        .spacing(16)
+        .align_items(Align::Center)
+        .width(Length::Fill)
+        .height(Length::Fill)
+        .padding(16)
+        .into()
+    }
 
-        server_options.push(
+    fn background_color(&self) -> Color {
+        Color::BLACK
+    }
+}
+
+impl Gui {
+    /// The row of buttons & inputs users can interact with the server with
+    fn server_interactions(&mut self) -> Vec<iced::Element<'_, <Self as Application>::Message>> {
+        let mut server_interactions: Vec<iced::Element<'_, <Self as Application>::Message>> =
+            Vec::new();
+
+        // Start / Restart button
+        server_interactions.push(
             Button::new(
                 &mut self.widgets.restart_server,
                 Text::new(match self.server_status {
@@ -115,8 +157,9 @@ impl Application for Gui {
             .into(),
         );
 
+        // Stop button
         if let Online { ip: _ } | OnlineNoIp = self.server_status {
-            server_options.push(
+            server_interactions.push(
                 Button::new(&mut self.widgets.stop_server, Text::new("Stop"))
                     .on_press(ServerCommand(Stop))
                     .padding(PADDING)
@@ -125,7 +168,8 @@ impl Application for Gui {
             );
         }
 
-        server_options.push(
+        // Port number
+        server_interactions.push(
             TextInput::new(
                 &mut self.widgets.port,
                 "Port",
@@ -148,30 +192,6 @@ impl Application for Gui {
             .into(),
         );
 
-        Column::with_children(vec![
-            Text::new(format!(
-                "Server status: {}",
-                match &self.server_status {
-                    Offline => "Offline".to_owned(),
-                    Restarting => "Restarting".to_owned(),
-                    OnlineNoIp => "Online, couldn't get local IP address".to_owned(),
-                    Online { ip } => format!("Online, your local IP address is {}", ip),
-                    Err => "The server threw an error".to_owned(),
-                }
-            ))
-            .color(Color::WHITE)
-            .into(),
-            Row::with_children(server_options).spacing(16).into(),
-        ])
-        .spacing(16)
-        .align_items(Align::Center)
-        .width(Length::Fill)
-        .height(Length::Fill)
-        .padding(16)
-        .into()
-    }
-
-    fn background_color(&self) -> Color {
-        Color::BLACK
+        server_interactions
     }
 }

@@ -2,13 +2,16 @@ use std::future::Future;
 use std::net::{IpAddr, UdpSocket};
 use std::path::PathBuf;
 
+/// Get the location where the application can store data
 pub fn get_data_dir() -> PathBuf {
     dirs::data_dir()
         .expect("You're running an unsupported operating system")
         .join("dnd-stuff")
 }
 
-// https://github.com/egmkang/local_ipaddress/blob/master/src/lib.rs
+/// Get the server's local ip address that the server can be accessed from
+///
+/// https://github.com/egmkang/local_ipaddress/blob/master/src/lib.rs
 pub fn get_local_ip() -> Option<IpAddr> {
     let socket = match UdpSocket::bind("0.0.0.0:0") {
         Ok(s) => s,
@@ -27,6 +30,10 @@ pub fn get_local_ip() -> Option<IpAddr> {
     };
 }
 
+/// Await the value in an option
+///
+/// If the value is Some, await what's inside and return the value awaited
+/// Otherwise, immediately return None
 pub async fn await_option<T>(v: Option<impl Future<Output = T>>) -> Option<T> {
     match v {
         Some(v) => Some(v.await),

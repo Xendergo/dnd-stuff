@@ -22,16 +22,17 @@ pub(super) async fn start_server(
     println!("Starting server");
     let addr = SocketAddr::from(([0, 0, 0, 0], port));
 
+    // Enter the tokio runtime, the runtime can't get sent in a closure to the request handler because of lifetime issues
     let guard = runtime.handle().enter();
 
-    // And a MakeService to handle each connection...
+    // Register the request handler
     let make_service = service::make_service_fn(|_conn| async {
         Ok::<_, Error>(service::service_fn(handle_request))
     });
 
-    // Then bind and serve...
     let server = Server::bind(&addr).serve(make_service);
 
+    // Configure the server to stop when the oneshot value is received
     let graceful = server.with_graceful_shutdown(async {
         cancel_signal.await.ok();
     });
@@ -42,18 +43,24 @@ pub(super) async fn start_server(
     }
     .ok();
 
-    // And run forever...
-    if let Err(e) = graceful.await {
-        eprintln!("server error: {}", e);
-        status_sender.send(ServerStatus::Err).ok();
-        return;
+    // Run forever, until there's an error or the server shuts down
+    match graceful.await {
+        Ok(_) => {
+            println!("Server stopped");
+            status_sender.send(ServerStatus::Offline).ok();
+        }
+
+        Err(e) => {
+            eprintln!("Server errored: {}", e);
+            status_sender.send(ServerStatus::Err).ok();
+        }
     }
 
-    status_sender.send(ServerStatus::Offline).ok();
-
+    // Stay in the tokio runtime until the server is closed instead of exiting immediately
     drop(guard)
 }
 
+/// Handle requests sent to the server
 async fn handle_request(request: Request<Body>) -> Result<Response<Body>, Error> {
     if hyper_tungstenite::is_upgrade_request(&request) {
         println!("Received upgrade request");
@@ -66,13 +73,13 @@ async fn handle_request(request: Request<Body>) -> Result<Response<Body>, Error>
             }
         });
 
-        // Return the response so the spawned future can continue.
         return Ok(response);
     }
 
     Ok(Response::new(Body::from("Hello HTTP!")))
 }
 
+/// Manage a websocket connection
 async fn serve_websocket(websocket: HyperWebsocket) -> Result<(), Error> {
     println!("Websocket successfully connected");
     let mut websocket = websocket.await?;
