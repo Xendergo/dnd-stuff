@@ -13,10 +13,3 @@ export class Character {
     hp: number | null
     initiative: number | null
 }
-
-export let characters: Store<Character[]> = new Store(
-    JSON.parse(localStorage.getItem("characters") ?? "[]").map(
-        v => new Character(v)
-    ),
-    v => localStorage.setItem("characters", JSON.stringify(v))
-)

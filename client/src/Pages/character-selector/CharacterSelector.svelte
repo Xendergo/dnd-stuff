@@ -1,40 +1,18 @@
 <script lang="ts">
-    import { CAMPAIGNS_GMING, IP_ADDRESS, urlParams } from "../../data"
+    import { CAMPAIGNS, CAMPAIGN_NAME, IP_ADDRESS, IS_GM } from "../../data"
 
-    import { characters } from "../../characters"
-    import { connect } from "../../server-interface"
-
-    let IS_GM = urlParams.get("gm") === "true"
-    let CAMPAIGN_NAME: string | null = urlParams.get("campaign") ?? null
+    import { connect, getCharacters } from "../../server-interface"
+    import BattleData from "../character-data/BattleData.svelte"
 
     let tmp_ip_address = ""
 </script>
 
 <main>
     <table>
-        {#if !IS_GM}
-            {#each $characters as character}
-                <tr
-                    ><td
-                        ><a
-                            href={`./character-data/?character=${character.name}`}
-                        >
-                            {character.name}
-                        </a></td
-                    >
-                </tr>
-            {/each}
-            <tr>
-                <td class="no-border">
-                    <a href="./character-creator/"
-                        ><button>New character</button></a
-                    >
-                </td>
-            </tr>
-        {:else if CAMPAIGN_NAME === null}
-            {#each Object.keys($CAMPAIGNS_GMING) as name}
+        {#if CAMPAIGN_NAME === null}
+            {#each Object.keys($CAMPAIGNS) as name}
                 <tr>
-                    <td><a href={`./?gm=true&campaign=${name}`}>{name}</a></td>
+                    <td><a href={`./?campaign=${name}`}>{name}</a></td>
                 </tr>
             {/each}
             <tr>
@@ -46,21 +24,20 @@
             </tr>
         {:else}
             <tr><td class="title">{CAMPAIGN_NAME}</td></tr>
-            {#each $CAMPAIGNS_GMING[CAMPAIGN_NAME] as npc}
+            {#each getCharacters() as character}
                 <tr>
                     <td
                         ><a
-                            href={`./character-data/?gm=true&campaign=${CAMPAIGN_NAME}&character=${npc.name}`}
-                            >{npc.name}</a
+                            href={`./character-data/?campaign=${CAMPAIGN_NAME}&character=${character.value.name}`}
+                            >{character.value.name}</a
                         ></td
                     >
                 </tr>
             {/each}
             <tr>
                 <td class="no-border">
-                    <a
-                        href={`./character-creator/?gm=true&campaign=${CAMPAIGN_NAME}`}
-                        ><button>New NPC</button></a
+                    <a href={`./character-creator/?campaign=${CAMPAIGN_NAME}`}
+                        ><button>New character</button></a
                     >
                 </td>
             </tr>
@@ -83,12 +60,12 @@
             >
         {/if}
 
-        {#if !IS_GM}
-            <button id="gm-button" on:click={() => (IS_GM = true)}
+        {#if !$IS_GM}
+            <button id="gm-button" on:click={() => ($IS_GM = true)}
                 >I'm the GM</button
             >
         {:else}
-            <button id="gm-button" on:click={() => (IS_GM = false)}
+            <button id="gm-button" on:click={() => ($IS_GM = false)}
                 >I'm not the GM</button
             >
         {/if}

@@ -1,17 +1,13 @@
 <script lang="ts">
-    import { CAMPAIGNS_GMING, urlParams } from "../../data"
+    import { CAMPAIGNS, CAMPAIGN_NAME, IS_GM } from "../../data"
 
-    import { Character, characters } from "../../characters"
-
-    let IS_GM = urlParams.get("gm") === "true"
-    let CAMPAIGN_NAME = urlParams.get("campaign")
+    import { Character } from "../../characters"
 
     if (
-        IS_GM &&
-        (CAMPAIGN_NAME === null ||
-            !Object.keys($CAMPAIGNS_GMING).includes(CAMPAIGN_NAME))
+        CAMPAIGN_NAME === null ||
+        !Object.keys($CAMPAIGNS).includes(CAMPAIGN_NAME)
     ) {
-        IS_GM = false
+        IS_GM.value = false
     }
 
     let name = ""
@@ -21,50 +17,27 @@
 
 <main>
     <div class="column fullscreen">
-        <input
-            placeholder={`Name of ${IS_GM ? "NPC" : "Character"}`}
-            bind:value={name}
-        />
+        <input placeholder={`Name of character`} bind:value={name} />
         <button
             on:click={() => {
                 if (name !== "") {
-                    if (IS_GM) {
-                        if (
-                            $CAMPAIGNS_GMING[CAMPAIGN_NAME].reduce(
-                                (a, v) => v.name === name || a,
-                                false
-                            )
-                        ) {
-                            error =
-                                "You're already playing an NPC with that name"
-                        } else {
-                            CAMPAIGNS_GMING.update(
-                                v => (
-                                    v[CAMPAIGN_NAME].push(
-                                        new Character({ name })
-                                    ),
-                                    v
-                                )
-                            )
-
-                            location.href = `../character-data/?gm=true&campaign=${CAMPAIGN_NAME}&character=${name}`
-                        }
+                    if (
+                        $CAMPAIGNS[CAMPAIGN_NAME].reduce(
+                            (a, v) => v.name === name || a,
+                            false
+                        )
+                    ) {
+                        error =
+                            "You're already playing a character with that name"
                     } else {
-                        if (
-                            $characters.reduce(
-                                (a, v) => v.name === name || a,
-                                false
+                        CAMPAIGNS.update(
+                            v => (
+                                v[CAMPAIGN_NAME].push(new Character({ name })),
+                                v
                             )
-                        ) {
-                            error =
-                                "You're already playing a character with that name"
-                        } else {
-                            characters.update(
-                                v => (v.push(new Character({ name })), v)
-                            )
+                        )
 
-                            location.href = `../character-data/?gm=false&character=${name}`
-                        }
+                        location.href = `../character-data/campaign=${CAMPAIGN_NAME}&character=${name}`
                     }
                 } else {
                     error = "Enter a name"

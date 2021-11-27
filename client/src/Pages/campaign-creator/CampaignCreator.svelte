@@ -1,5 +1,5 @@
 <script lang="ts">
-    import { CAMPAIGNS_GMING } from "../../data"
+    import { CAMPAIGNS } from "../../data"
 
     let name = ""
 
@@ -12,8 +12,10 @@
         <button
             on:click={() => {
                 if (name !== "") {
-                    if ($CAMPAIGNS_GMING[name] === undefined) {
-                        $CAMPAIGNS_GMING[name] = []
+                    if ($CAMPAIGNS[name] === undefined) {
+                        $CAMPAIGNS[name] = []
+
+                        location.href = `../?gm=true&campaign=${name}`
                     } else {
                         error = "You're already GMing a campaign with that name"
                     }

@@ -1,19 +1,19 @@
 import { Store } from "./better-store"
 import { Character } from "./characters"
 
-export const urlParams = new URLSearchParams(location.search)
+const urlParams = new URLSearchParams(location.search)
 
-let campaigns_gming_raw = JSON.parse(
+let campaigns_raw = JSON.parse(
     localStorage.getItem("campaigns_gming") ?? "{}"
 ) as { [key: string]: string[] }
 
-let campaigns_gming = {} as { [key: string]: Character[] }
+let campaigns = {} as { [key: string]: Character[] }
 
-Object.keys(campaigns_gming_raw).forEach(key => {
-    campaigns_gming[key] = campaigns_gming_raw[key].map(v => new Character(v))
+Object.keys(campaigns_raw).forEach(key => {
+    campaigns[key] = campaigns_raw[key].map(v => new Character(v))
 })
 
-export let CAMPAIGNS_GMING = new Store(campaigns_gming, data =>
+export let CAMPAIGNS = new Store(campaigns, data =>
     localStorage.setItem("campaigns_gming", JSON.stringify(data))
 )
 
@@ -22,3 +22,11 @@ let ip = sessionStorage.getItem("ip")
 export let IP_ADDRESS = new Store(ip === "" ? null : ip, data =>
     sessionStorage.setItem("ip", data)
 )
+
+export let IS_GM = new Store(sessionStorage.getItem("gm") === "true", v =>
+    sessionStorage.setItem("gm", v === true ? "true" : "false")
+)
+
+export let CAMPAIGN_NAME = urlParams.get("campaign") ?? null
+
+export let CHARACTER_NAME = urlParams.get("character") ?? null

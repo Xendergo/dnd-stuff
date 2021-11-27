@@ -1,15 +1,32 @@
-import { IP_ADDRESS } from "./data"
+import { Store } from "./better-store"
+import {
+    CAMPAIGNS,
+    CAMPAIGN_NAME,
+    CHARACTER_NAME,
+    IP_ADDRESS,
+    IS_GM,
+} from "./data"
+
+let socket: WebSocket | null = null
 
 export function connect() {
     let address = `ws://${IP_ADDRESS.value}${
         IP_ADDRESS.value.includes(":") ? "" : ":8000"
     }`
 
-    console.log(address)
+    socket = new WebSocket(address)
+}
 
-    let socket = new WebSocket(address)
+if (IP_ADDRESS.value) {
+    connect()
+}
 
-    socket.onmessage = msg => console.log(msg)
+export function getCharacters() {
+    if (socket === null) {
+        let characters = CAMPAIGNS.value[CAMPAIGN_NAME]
 
-    socket.onopen = () => socket.send("Poggers")
+        return characters.map(
+            v => new Store(v, () => CAMPAIGNS.notifySubscribers())
+        )
+    }
 }
