@@ -9,6 +9,7 @@ use iced::futures::{SinkExt, StreamExt};
 use tokio::{
     runtime::Runtime,
     sync::{
+        broadcast,
         mpsc::{self, UnboundedSender},
         oneshot,
     },
@@ -23,7 +24,14 @@ use super::{
     ServerStatus::*,
 };
 
-use ClientMessage::*;
+#[derive(Debug, Clone)]
+enum InternalMessage {
+    CharacterUpdated {
+        character_name: String,
+        character_data: String,
+        player_id: u32,
+    },
+}
 
 pub(super) async fn start_server(
     port: u16,
@@ -36,13 +44,21 @@ pub(super) async fn start_server(
 
     let cloned_signal_sender = signal_sender.clone();
 
+    let (internal_message_broadcaster, _) = broadcast::channel(32);
+
     // Register the request handler
     let make_service = service::make_service_fn(move |_conn| {
         let runtime = Arc::clone(&runtime);
         let signal_sender = signal_sender.clone();
+        let internal_message_broadcaster = internal_message_broadcaster.clone();
 
         let service = service::service_fn(move |req| {
-            handle_request(req, Arc::clone(&runtime), signal_sender.clone())
+            handle_request(
+                req,
+                Arc::clone(&runtime),
+                signal_sender.clone(),
+                internal_message_broadcaster.clone(),
+            )
         });
 
         async move { Ok::<_, Infallible>(service) }
@@ -80,6 +96,7 @@ async fn handle_request(
     request: Request<Body>,
     runtime: Arc<Runtime>,
     signal_sender: UnboundedSender<ServerMessage>,
+    internal_message_broadcaster: broadcast::Sender<InternalMessage>,
 ) -> Result<Response<Body>, Error> {
     if hyper_tungstenite::is_upgrade_request(&request) {
         println!("Received upgrade request");
@@ -87,7 +104,13 @@ async fn handle_request(
 
         // Spawn a task to handle the websocket connection.
         runtime.spawn(async move {
-            if let Err(e) = serve_websocket(websocket, signal_sender.clone()).await {
+            if let Err(e) = serve_websocket(
+                websocket,
+                signal_sender.clone(),
+                internal_message_broadcaster.clone(),
+            )
+            .await
+            {
                 eprintln!("Error in websocket connection: {}", e);
             }
         });
@@ -98,63 +121,110 @@ async fn handle_request(
     Ok(Response::new(Body::from("Hello HTTP!")))
 }
 
-#[derive(Debug, Serialize, Deserialize)]
-enum ClientMessage {
+#[derive(Debug, Deserialize)]
+enum FromClientMessage {
     Id(Option<u32>),
+    CharacterUpdated { name: String, data: String },
+}
+
+#[derive(Debug, Serialize)]
+enum ToClientMessage {
+    Id(u32),
+    CharacterUpdated {
+        name: String,
+        data: String,
+        player_id: u32,
+    },
 }
 
 /// Manage a websocket connection
 async fn serve_websocket(
     websocket: HyperWebsocket,
     signal_sender: UnboundedSender<ServerMessage>,
+    internal_message_broadcaster: broadcast::Sender<InternalMessage>,
 ) -> Result<(), Error> {
     println!("Websocket successfully connected");
+
+    let mut internal_message_receiver = internal_message_broadcaster.subscribe();
 
     let mut websocket = websocket.await?;
 
     let mut id: Option<u32> = None;
 
-    while let Some(message) = websocket.next().await {
-        match message? {
-            Message::Text(msg_raw) => {
-                println!("{:?}", msg_raw);
-                let msg: ClientMessage = match serde_json::from_str(&msg_raw) {
+    loop {
+        tokio::select! {
+            maybe_message = websocket.next() => {
+                // Exit the loop if websocket.next returns none, because if it does, the websocket was closed
+
+                let message = if let Some(v) = maybe_message {v} else {break};
+
+                match message? {
+                    Message::Text(msg_raw) => {
+                        println!("{:?}", msg_raw);
+                        let msg: FromClientMessage = match serde_json::from_str(&msg_raw) {
+                            Ok(v) => v,
+                            Err(_) => continue,
+                        };
+
+                        match msg {
+                            FromClientMessage::Id(v) => {
+                                if id.is_some() {
+                                    continue;
+                                }
+
+                                match v {
+                                    Some(v) => id = Some(v),
+                                    None => {
+                                        send(&mut websocket, ToClientMessage::Id(rand::random())).await?;
+                                    }
+                                }
+
+                                signal_sender.send(NewConnection { id: id.unwrap() }).ok();
+                            }
+
+                            FromClientMessage::CharacterUpdated { name, data } => {
+                                internal_message_broadcaster
+                                    .send(InternalMessage::CharacterUpdated {
+                                        character_name: name,
+                                        character_data: data,
+                                        player_id: match id {
+                                            Some(v) => v,
+                                            None => continue,
+                                        },
+                                    })
+                                    .ok();
+                            }
+                        }
+                    }
+
+                    Message::Close(msg) => {
+                        // No need to send a reply: tungstenite takes care of this for you.
+                        if let Some(msg) = &msg {
+                            println!(
+                                "Received close message with code {} and message: {}",
+                                msg.code, msg.reason
+                            );
+                        } else {
+                            println!("Received close message");
+                        }
+                    }
+
+                    _ => {}
+                }
+            }
+
+            maybe_internal_message = internal_message_receiver.recv() => {
+                let internal_message = match maybe_internal_message {
                     Ok(v) => v,
                     Err(_) => continue,
                 };
 
-                match msg {
-                    Id(v) => {
-                        if id.is_some() {
-                            continue;
-                        }
-
-                        match v {
-                            Some(v) => id = Some(v),
-                            None => {
-                                id = Some(rand::random());
-                                send(&mut websocket, Id(id)).await?;
-                            }
-                        }
-
-                        signal_sender.send(NewConnection { id: id.unwrap() }).ok();
+                match internal_message {
+                    InternalMessage::CharacterUpdated {character_name, character_data, player_id} => {
+                        send(&mut websocket, ToClientMessage::CharacterUpdated {name: character_name, data: character_data, player_id}).await?;
                     }
                 }
             }
-
-            Message::Close(msg) => {
-                // No need to send a reply: tungstenite takes care of this for you.
-                if let Some(msg) = &msg {
-                    println!(
-                        "Received close message with code {} and message: {}",
-                        msg.code, msg.reason
-                    );
-                } else {
-                    println!("Received close message");
-                }
-            }
-
-            _ => {}
         }
     }
 
@@ -163,7 +233,7 @@ async fn serve_websocket(
 
 async fn send(
     websocket: &mut WebSocketStream<Upgraded>,
-    message: ClientMessage,
+    message: ToClientMessage,
 ) -> Result<(), Error> {
     websocket
         .send(Message::Text(serde_json::to_string(&message).unwrap()))
