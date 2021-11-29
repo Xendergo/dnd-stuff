@@ -15,6 +15,7 @@ pub struct Gui {
     server_status: ServerStatus,
     server: Server,
     widgets: Widgets,
+    connections: Vec<ConnectionData>,
 }
 
 #[derive(Default)]
@@ -66,6 +67,7 @@ impl Application for Gui {
                 server_status: ServerStatus::Offline,
                 server: Server::new(Arc::clone(&runtime)),
                 widgets: Widgets::default(),
+                connections: Vec::new(),
             },
             Command::none(),
         )
@@ -100,9 +102,14 @@ impl Application for Gui {
                 }
             },
 
-            ServerMessage(msg) => {
-                println!("GUI told about new connection (poggers)")
-            }
+            ServerMessage(msg) => match msg {
+                ServerMessage::NewConnection { id } => {
+                    println!("Server told about connection");
+                    self.connections.push(ConnectionData { id });
+                }
+
+                ServerMessage::Status(_) => unreachable!(), // Status messages should be intercepted and sent as ServerStatus instead
+            },
 
             None => {}
         }
@@ -126,9 +133,21 @@ impl Application for Gui {
             .color(Color::WHITE)
             .into(),
             // The row of server interactions
-            Row::with_children(self.server_interactions())
-                .spacing(16)
-                .into(),
+            Row::with_children(Gui::server_interactions(
+                &mut self.widgets,
+                self.server_status,
+            ))
+            .spacing(16)
+            .into(),
+            Space::new(Length::Units(0), Length::Units(8)).into(),
+            Text::new("Connections").color(Color::WHITE).size(30).into(),
+            Column::with_children(
+                self.connections
+                    .iter()
+                    .map(|v| Row::with_children(v.view()).into())
+                    .collect::<Vec<_>>(),
+            )
+            .into(),
         ])
         .spacing(16)
         .align_items(Align::Center)
@@ -145,15 +164,18 @@ impl Application for Gui {
 
 impl Gui {
     /// The row of buttons & inputs users can interact with the server with
-    fn server_interactions(&mut self) -> Vec<iced::Element<'_, <Self as Application>::Message>> {
+    fn server_interactions(
+        widgets: &mut Widgets,
+        server_status: ServerStatus,
+    ) -> Vec<iced::Element<'_, <Self as Application>::Message>> {
         let mut server_interactions: Vec<iced::Element<'_, <Self as Application>::Message>> =
             Vec::new();
 
         // Start / Restart button
         server_interactions.push(
             Button::new(
-                &mut self.widgets.restart_server,
-                Text::new(match self.server_status {
+                &mut widgets.restart_server,
+                Text::new(match server_status {
                     Offline => "Start",
                     _ => "Restart",
                 }),
@@ -165,9 +187,9 @@ impl Gui {
         );
 
         // Stop button
-        if let Online { ip: _ } | OnlineNoIp = self.server_status {
+        if let Online { ip: _ } | OnlineNoIp = server_status {
             server_interactions.push(
-                Button::new(&mut self.widgets.stop_server, Text::new("Stop"))
+                Button::new(&mut widgets.stop_server, Text::new("Stop"))
                     .on_press(ServerCommand(Stop))
                     .padding(PADDING)
                     .style(styling::Button())
@@ -178,9 +200,9 @@ impl Gui {
         // Port number
         server_interactions.push(
             TextInput::new(
-                &mut self.widgets.port,
+                &mut widgets.port,
                 "Port",
-                &self.widgets.port_number.to_string(),
+                &widgets.port_number.to_string(),
                 |port| {
                     let filtered = port
                         .trim_matches(|char: char| !char.is_ascii_digit())
@@ -200,5 +222,19 @@ impl Gui {
         );
 
         server_interactions
+    }
+}
+
+struct ConnectionData {
+    id: u32,
+}
+
+impl ConnectionData {
+    fn view(&self) -> Vec<iced::Element<'_, <Gui as Application>::Message>> {
+        let mut data: Vec<iced::Element<'_, <Gui as Application>::Message>> = Vec::new();
+
+        data.push(Text::new(self.id.to_string()).color(Color::WHITE).into());
+
+        data
     }
 }
