@@ -27,7 +27,6 @@ use super::{
 #[derive(Debug, Clone)]
 enum InternalMessage {
     CharacterUpdated {
-        character_name: String,
         character_data: String,
         player_id: u32,
     },
@@ -124,17 +123,13 @@ async fn handle_request(
 #[derive(Debug, Deserialize)]
 enum FromClientMessage {
     Id(Option<u32>),
-    CharacterUpdated { name: String, data: String },
+    CharacterUpdated { data: String },
 }
 
 #[derive(Debug, Serialize)]
 enum ToClientMessage {
     Id(u32),
-    CharacterUpdated {
-        name: String,
-        data: String,
-        player_id: u32,
-    },
+    CharacterUpdated { data: String, player_id: u32 },
 }
 
 /// Manage a websocket connection
@@ -165,6 +160,7 @@ async fn serve_websocket(
                             Ok(v) => v,
                             Err(_) => continue,
                         };
+                        println!("{:?}", msg);
 
                         match msg {
                             FromClientMessage::Id(v) => {
@@ -175,17 +171,20 @@ async fn serve_websocket(
                                 match v {
                                     Some(v) => id = Some(v),
                                     None => {
-                                        send(&mut websocket, ToClientMessage::Id(rand::random())).await?;
+                                        let id_value = rand::random();
+
+                                        send(&mut websocket, ToClientMessage::Id(id_value)).await?;
+
+                                        id = Some(id_value);
                                     }
                                 }
 
                                 signal_sender.send(NewConnection { id: id.unwrap() }).ok();
                             }
 
-                            FromClientMessage::CharacterUpdated { name, data } => {
+                            FromClientMessage::CharacterUpdated { data } => {
                                 internal_message_broadcaster
                                     .send(InternalMessage::CharacterUpdated {
-                                        character_name: name,
                                         character_data: data,
                                         player_id: match id {
                                             Some(v) => v,
@@ -220,8 +219,8 @@ async fn serve_websocket(
                 };
 
                 match internal_message {
-                    InternalMessage::CharacterUpdated {character_name, character_data, player_id} => {
-                        send(&mut websocket, ToClientMessage::CharacterUpdated {name: character_name, data: character_data, player_id}).await?;
+                    InternalMessage::CharacterUpdated { character_data, player_id } => {
+                        send(&mut websocket, ToClientMessage::CharacterUpdated { data: character_data, player_id }).await?;
                     }
                 }
             }

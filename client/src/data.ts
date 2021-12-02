@@ -28,12 +28,12 @@ export let IS_GM = new Store(sessionStorage.getItem("gm") === "true", v =>
 )
 
 export let SERVER_ID = new Store(
-    sessionStorage.getItem("server_id") ?? null,
+    parseInt(sessionStorage.getItem("server_id")) ?? null,
     v => {
         if (v === null) {
             sessionStorage.removeItem("server_id")
         } else {
-            sessionStorage.setItem("server_id", v)
+            sessionStorage.setItem("server_id", v.toString())
         }
     }
 )

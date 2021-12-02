@@ -1,9 +1,8 @@
 <script lang="ts">
-    import { CAMPAIGNS, CAMPAIGN_NAME, CHARACTER_NAME, IS_GM } from "../../data"
-
-    import { Store } from "../../better-store"
+    import { CAMPAIGNS, CAMPAIGN_NAME, CHARACTER_NAME } from "../../data"
 
     import BattleData from "./BattleData.svelte"
+    import { getCharacters } from "../../server-interface"
 
     if (CHARACTER_NAME === null) {
         window.location.href = "../"
@@ -16,21 +15,17 @@
         location.href = "../"
     }
 
-    let characterList = new Store($CAMPAIGNS[CAMPAIGN_NAME], v =>
-        CAMPAIGNS.notifySubscribers()
-    )
+    let characterList = getCharacters()
 
-    let characterIndex = $characterList.findIndex(
-        v => v.name === CHARACTER_NAME
+    let characterIndex = characterList.findIndex(
+        v => v.value.name === CHARACTER_NAME
     )
 
     if (characterIndex === -1) {
         window.location.href = "../"
     }
 
-    let character = new Store($characterList[characterIndex], v =>
-        characterList.notifySubscribers()
-    )
+    let character = characterList[characterIndex]
 </script>
 
 <svelte:head>
