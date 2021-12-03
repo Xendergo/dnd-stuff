@@ -1,81 +1,12 @@
 import { Store } from "./better-store"
 import { CAMPAIGNS, CAMPAIGN_NAME, IP_ADDRESS, SERVER_ID } from "./data"
-import {
-    AbstractListenerManager,
-    MakeSendable,
-    Registry,
-    Sendable,
-    strats,
-} from "triangulum"
-import type { Character } from "./characters"
+import { Sendable, strats } from "triangulum"
+import { Character } from "./characters"
+import { ConnectionManager, Message } from "./socket"
 
 export let socket: ConnectionManager | null = null
 
-const messageRegistry = new Registry<Sendable>()
-
-class ConnectionManager extends AbstractListenerManager<
-    Sendable,
-    object,
-    string
-> {
-    constructor() {
-        super(messageRegistry)
-
-        let address = `ws://${IP_ADDRESS.value}${
-            IP_ADDRESS.value.includes(":") ? "" : ":8000"
-        }`
-
-        this.ws = new WebSocket(address)
-
-        this.ws.onmessage = e => {
-            if (typeof e.data !== "string") return
-
-            console.log(e.data)
-
-            this.onData(e.data as string)
-        }
-
-        this.ws.onopen = e => {
-            this.ready()
-        }
-    }
-
-    transmit(data: string) {
-        this.ws.send(data)
-    }
-
-    encode(data: Sendable): string {
-        return `{"${data.channel}": ${JSON.stringify(data)}}`
-    }
-
-    decode(data: string): [string, object] {
-        let data_parsed = JSON.parse(data)
-
-        let keys = Object.keys(data_parsed)
-
-        if (keys.length === 0) {
-            throw new Error("No data")
-        }
-
-        return [keys[0], data_parsed[keys[0]]]
-    }
-
-    finalize(
-        data: object,
-        typeCheckingLayers: (data: any) => boolean
-    ): Sendable {
-        if (!typeCheckingLayers[0](data)) {
-            throw new Error("Type checking failed")
-        }
-
-        return data as Sendable
-    }
-
-    ws
-}
-
-@MakeSendable(
-    messageRegistry,
+@Message(
     "Id",
     strats.class({
         id: strats.isNumber,
@@ -90,18 +21,18 @@ export class Id extends Sendable {
     id: number
 }
 
-@MakeSendable(messageRegistry, "RequestId", strats.dontCheck())
+@Message("RequestId", strats.dontCheck())
 export class RequestId extends Sendable {
     constructor() {
         super()
     }
 }
 
-@MakeSendable(
-    messageRegistry,
+@Message(
     "CharacterUpdated",
     strats.class({
         data: strats.isString,
+        player_id: strats.isNumber,
     })
 )
 export class CharacterUpdated extends Sendable {
@@ -111,11 +42,13 @@ export class CharacterUpdated extends Sendable {
     }
 
     data: string
+    player_id: number | undefined = undefined
 }
 
 export function connect() {
     socket = new ConnectionManager()
 
+    console.log(SERVER_ID.value)
     if (SERVER_ID.value === null) {
         socket.send(new RequestId())
     } else {
@@ -123,7 +56,11 @@ export function connect() {
     }
 
     socket.listen(Id, id => SERVER_ID.set(id.id))
+
+    socket.listen(CharacterUpdated, onCharacterUpdated)
 }
+
+let networkCharacters: Character[] = []
 
 console.log("Trying to connect")
 if (IP_ADDRESS.value) {
@@ -154,4 +91,28 @@ export function getCharacters() {
 
         return localCharactersStores
     }
+}
+
+function onCharacterUpdated(characterUpdated: CharacterUpdated) {
+    if (characterUpdated.player_id === SERVER_ID.value) {
+        console.log("RECEIVED OWN DATA")
+        return
+    }
+
+    let decoded = new Character(JSON.parse(characterUpdated.data))
+
+    let indexOfCharacter = networkCharacters.findIndex(
+        v => v.name === decoded.name
+    )
+
+    if (indexOfCharacter === -1) {
+        networkCharacters.push(decoded)
+        return
+    }
+
+    networkCharacters[indexOfCharacter] = decoded
+
+    networkCharacters = networkCharacters.filter(
+        (v, i) => i <= indexOfCharacter || v.name !== decoded.name
+    )
 }

@@ -27,16 +27,15 @@ export let IS_GM = new Store(sessionStorage.getItem("gm") === "true", v =>
     sessionStorage.setItem("gm", v === true ? "true" : "false")
 )
 
-export let SERVER_ID = new Store(
-    parseInt(sessionStorage.getItem("server_id")) ?? null,
-    v => {
-        if (v === null) {
-            sessionStorage.removeItem("server_id")
-        } else {
-            sessionStorage.setItem("server_id", v.toString())
-        }
+let maybe_id = parseInt(sessionStorage.getItem("server_id"))
+
+export let SERVER_ID = new Store(isNaN(maybe_id) ? null : maybe_id, v => {
+    if (v === null) {
+        sessionStorage.removeItem("server_id")
+    } else {
+        sessionStorage.setItem("server_id", v.toString())
     }
-)
+})
 
 export let CAMPAIGN_NAME = urlParams.get("campaign") ?? null
 

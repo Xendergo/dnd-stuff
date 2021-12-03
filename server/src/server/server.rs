@@ -122,13 +122,14 @@ async fn handle_request(
 
 #[derive(Debug, Deserialize)]
 enum FromClientMessage {
-    Id(Option<u32>),
+    RequestId {},
+    Id { id: u32 },
     CharacterUpdated { data: String },
 }
 
 #[derive(Debug, Serialize)]
 enum ToClientMessage {
-    Id(u32),
+    Id { id: u32 },
     CharacterUpdated { data: String, player_id: u32 },
 }
 
@@ -155,29 +156,29 @@ async fn serve_websocket(
 
                 match message? {
                     Message::Text(msg_raw) => {
-                        println!("{:?}", msg_raw);
+                        println!("{}", msg_raw);
                         let msg: FromClientMessage = match serde_json::from_str(&msg_raw) {
                             Ok(v) => v,
                             Err(_) => continue,
                         };
-                        println!("{:?}", msg);
 
                         match msg {
-                            FromClientMessage::Id(v) => {
+                            FromClientMessage::RequestId {} => {
+                                let id_value = rand::random();
+
+                                send(&mut websocket, ToClientMessage::Id {id:id_value}).await?;
+
+                                id = Some(id_value);
+
+                                signal_sender.send(NewConnection { id: id.unwrap() }).ok();
+                            },
+
+                            FromClientMessage::Id {id: new_id} => {
                                 if id.is_some() {
                                     continue;
                                 }
 
-                                match v {
-                                    Some(v) => id = Some(v),
-                                    None => {
-                                        let id_value = rand::random();
-
-                                        send(&mut websocket, ToClientMessage::Id(id_value)).await?;
-
-                                        id = Some(id_value);
-                                    }
-                                }
+                                id = Some(new_id);
 
                                 signal_sender.send(NewConnection { id: id.unwrap() }).ok();
                             }
@@ -213,6 +214,7 @@ async fn serve_websocket(
             }
 
             maybe_internal_message = internal_message_receiver.recv() => {
+                println!("Character updated transmitted internally: {:?}", maybe_internal_message);
                 let internal_message = match maybe_internal_message {
                     Ok(v) => v,
                     Err(_) => continue,
@@ -241,10 +243,10 @@ async fn send(
 
 // #[cfg(test)]
 // mod tests {
-//     use super::ClientMessage::*;
+//     use super::FromClientMessage::*;
 
 //     #[test]
 //     fn bruh() {
-//         println!("{:?}", serde_json::to_string(&Id(None)));
+//         println!("{:?}", serde_json::to_string(&Id { id: 0 }));
 //     }
 // }
