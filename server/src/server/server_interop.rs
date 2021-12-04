@@ -39,6 +39,7 @@ pub enum ServerStatus {
 pub enum ServerMessage {
     Status(ServerStatus),
     NewConnection { id: u32 },
+    ClosedConnection { id: u32 },
 }
 
 impl Server {
@@ -114,7 +115,7 @@ impl<H: Hasher, I> Recipe<H, I> for ServerSubscription {
                         Message::ServerMessage(msg)
                     }
 
-                    else => Message::None
+                    else => Message::NoMessage
                 };
 
                 Some((message, server))

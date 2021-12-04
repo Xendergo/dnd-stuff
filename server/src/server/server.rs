@@ -139,8 +139,6 @@ async fn serve_websocket(
     signal_sender: UnboundedSender<ServerMessage>,
     internal_message_broadcaster: broadcast::Sender<InternalMessage>,
 ) -> Result<(), Error> {
-    println!("Websocket successfully connected");
-
     let mut internal_message_receiver = internal_message_broadcaster.subscribe();
 
     let mut websocket = websocket.await?;
@@ -227,6 +225,10 @@ async fn serve_websocket(
                 }
             }
         }
+    }
+
+    if let Some(id) = id {
+        signal_sender.send(ClosedConnection { id }).ok();
     }
 
     Ok(())

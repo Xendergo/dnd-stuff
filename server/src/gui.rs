@@ -34,7 +34,7 @@ pub enum InputChanged {
 #[derive(Debug, Clone)]
 pub enum Message {
     /// Do nothing
-    None,
+    NoMessage,
 
     /// Sent by the server when its status changes
     ServerStatus(ServerStatus),
@@ -104,14 +104,24 @@ impl Application for Gui {
 
             ServerMessage(msg) => match msg {
                 ServerMessage::NewConnection { id } => {
-                    println!("Server told about connection");
-                    self.connections.push(ConnectionData { id });
+                    let data = ConnectionData { id, shown: true };
+
+                    match self.connections.iter().position(|v| v.id == id) {
+                        Some(position) => self.connections[position] = data,
+                        None => self.connections.push(data),
+                    };
                 }
 
-                ServerMessage::Status(_) => unreachable!(), // Status messages should be intercepted and sent as ServerStatus instead
+                ServerMessage::ClosedConnection { id } => {
+                    if let Some(position) = self.connections.iter().position(|v| v.id == id) {
+                        self.connections[position].shown = false;
+                    }
+                }
+
+                ServerMessage::Status(_) => unreachable!(), // Status messages are intercepted and sent as ServerStatus instead
             },
 
-            None => {}
+            NoMessage => {}
         }
 
         Command::none()
@@ -144,6 +154,7 @@ impl Application for Gui {
             Column::with_children(
                 self.connections
                     .iter()
+                    .filter(|v| v.shown)
                     .map(|v| Row::with_children(v.view()).into())
                     .collect::<Vec<_>>(),
             )
@@ -211,7 +222,7 @@ impl Gui {
                     if filtered.parse::<u16>().is_ok() || filtered == "" {
                         InputChanged(PortNumber(filtered))
                     } else {
-                        None
+                        NoMessage
                     }
                 },
             )
@@ -227,6 +238,7 @@ impl Gui {
 
 struct ConnectionData {
     id: u32,
+    shown: bool,
 }
 
 impl ConnectionData {
