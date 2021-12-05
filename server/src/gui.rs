@@ -33,8 +33,7 @@ pub enum InputChanged {
 
 #[derive(Debug, Clone)]
 pub enum Message {
-    /// Do nothing
-    NoMessage,
+    DoNothing,
 
     /// Sent by the server when its status changes
     ServerStatus(ServerStatus),
@@ -121,7 +120,7 @@ impl Application for Gui {
                 ServerMessage::Status(_) => unreachable!(), // Status messages are intercepted and sent as ServerStatus instead
             },
 
-            NoMessage => {}
+            DoNothing => {}
         }
 
         Command::none()
@@ -219,10 +218,10 @@ impl Gui {
                         .trim_matches(|char: char| !char.is_ascii_digit())
                         .to_owned();
 
-                    if filtered.parse::<u16>().is_ok() || filtered == "" {
+                    if filtered.parse::<u16>().is_ok() || filtered.is_empty() {
                         InputChanged(PortNumber(filtered))
                     } else {
-                        NoMessage
+                        DoNothing
                     }
                 },
             )

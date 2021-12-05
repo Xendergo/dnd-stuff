@@ -25,9 +25,9 @@ pub fn get_local_ip() -> Option<IpAddr> {
     };
 
     match socket.local_addr() {
-        Ok(addr) => return Some(addr.ip()),
-        Err(_) => return None,
-    };
+        Ok(addr) => Some(addr.ip()),
+        Err(_) => None,
+    }
 }
 
 /// Await the value in an option

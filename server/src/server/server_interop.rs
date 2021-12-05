@@ -115,7 +115,7 @@ impl<H: Hasher, I> Recipe<H, I> for ServerSubscription {
                         Message::ServerMessage(msg)
                     }
 
-                    else => Message::NoMessage
+                    else => Message::DoNothing
                 };
 
                 Some((message, server))
