@@ -1,10 +1,5 @@
 import { ProceduralStore, Store } from "./better-store"
-import {
-    CAMPAIGNS,
-    CAMPAIGN_NAME,
-    IP_ADDRESS,
-    SERVER_ID as CLIENT_ID,
-} from "./data"
+import { CAMPAIGNS, CAMPAIGN_NAME, IP_ADDRESS, CLIENT_ID } from "./data"
 import { Character } from "./characters"
 import { ConnectionManager } from "./socket"
 import { CharacterUpdated, Id, RequestId } from "./sendable-types"
@@ -21,23 +16,28 @@ export function connect() {
         return
     }
 
+    CLIENT_ID.subscribe(id => {
+        if (CAMPAIGN_NAME !== null && id !== null) {
+            CAMPAIGNS.value[CAMPAIGN_NAME].forEach(character => {
+                character.owner = id
+                socket!.send(new CharacterUpdated(character))
+            })
+        }
+    })
+
     if (CLIENT_ID.value === null) {
         socket.send(new RequestId())
     } else {
         socket.send(new Id(CLIENT_ID.value))
     }
 
-    socket.listen(Id, id => CLIENT_ID.set(id.id))
+    socket.listen(Id, id => {
+        CLIENT_ID.set(id.id)
+    })
 
     socket.listen(CharacterUpdated, onCharacterUpdated)
 
     characterList.nextValueAvailable()
-
-    if (CAMPAIGN_NAME !== null) {
-        CAMPAIGNS.value[CAMPAIGN_NAME].forEach(character => {
-            socket!.send(new CharacterUpdated(character))
-        })
-    }
 }
 
 /*
@@ -76,6 +76,10 @@ class CharacterList extends ProceduralStore<Store<Character>[] | null> {
             )
         } else {
             let localCharacters = CAMPAIGNS.value[CAMPAIGN_NAME]
+
+            localCharacters.forEach(character => {
+                character.owner = CLIENT_ID.value
+            })
 
             let localCharactersStores = localCharacters.map(
                 v =>

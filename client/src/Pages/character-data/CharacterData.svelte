@@ -1,5 +1,10 @@
 <script lang="ts">
-    import { CAMPAIGNS, CAMPAIGN_NAME, CHARACTER_NAME } from "../../data"
+    import {
+        CAMPAIGNS,
+        CAMPAIGN_NAME,
+        CHARACTER_NAME,
+        CLIENT_ID,
+    } from "../../data"
 
     import BattleData from "./BattleData.svelte"
     import { characterList } from "../../server-interface"
@@ -25,7 +30,9 @@
 
     let character = characterList.value![characterIndex]
 
-    console.log(character, characterIndex, characterList.value)
+    let writeable =
+        character.value.owner === null ||
+        character.value.owner === CLIENT_ID.value
 </script>
 
 <svelte:head>
@@ -33,5 +40,5 @@
 </svelte:head>
 
 <main>
-    <BattleData bind:character />
+    <BattleData bind:character {writeable} />
 </main>

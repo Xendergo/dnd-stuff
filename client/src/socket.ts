@@ -4,7 +4,7 @@ import {
     Registry,
     Sendable,
 } from "triangulum"
-import { IP_ADDRESS, SERVER_ID } from "./data"
+import { IP_ADDRESS, CLIENT_ID } from "./data"
 
 const messageRegistry = new Registry<Sendable>()
 
@@ -38,7 +38,7 @@ export class ConnectionManager extends AbstractListenerManager<
     }
 
     disconnect() {
-        SERVER_ID.set(null)
+        CLIENT_ID.set(null)
         IP_ADDRESS.set(null)
     }
 

@@ -33,7 +33,7 @@ export let IS_GM = new Store(sessionStorage.getItem("gm") === "true", v =>
 
 let maybe_id = parseInt(sessionStorage.getItem("server_id")!)
 
-export let SERVER_ID = new Store(isNaN(maybe_id) ? null : maybe_id, v => {
+export let CLIENT_ID = new Store(isNaN(maybe_id) ? null : maybe_id, v => {
     if (v === null) {
         sessionStorage.removeItem("server_id")
     } else {

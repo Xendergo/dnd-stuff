@@ -1,6 +1,6 @@
 export class Character {
-    constructor(data, owner = null) {
-        this.owner = owner
+    constructor(data) {
+        this.owner = data.owner
 
         this.name = data.name
         this.hp = data.hp ?? null
