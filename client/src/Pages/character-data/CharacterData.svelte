@@ -2,7 +2,7 @@
     import { CAMPAIGNS, CAMPAIGN_NAME, CHARACTER_NAME } from "../../data"
 
     import BattleData from "./BattleData.svelte"
-    import { getCharacters } from "../../server-interface"
+    import { characterList } from "../../server-interface"
 
     if (CHARACTER_NAME === null) {
         window.location.href = "../"
@@ -15,9 +15,7 @@
         location.href = "../"
     }
 
-    let characterList = getCharacters()
-
-    let characterIndex = characterList.findIndex(
+    let characterIndex = characterList.value!.findIndex(
         v => v.value.name === CHARACTER_NAME
     )
 

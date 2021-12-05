@@ -9,7 +9,7 @@ const __dirname = dirname(fileURLToPath(import.meta.url))
 // https://vitejs.dev/config/
 export default defineConfig({
     plugins: [svelte()],
-    base: "dnd-stuff",
+    base: "/dnd-stuff/",
     build: {
         rollupOptions: {
             input: {
@@ -28,5 +28,8 @@ export default defineConfig({
                 ),
             },
         },
+    },
+    server: {
+        host: true,
     },
 })

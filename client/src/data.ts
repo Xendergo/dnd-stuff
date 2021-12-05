@@ -19,15 +19,19 @@ export let CAMPAIGNS = new Store(campaigns, data =>
 
 let ip = sessionStorage.getItem("ip")
 
-export let IP_ADDRESS = new Store(ip === "" ? null : ip, data =>
-    sessionStorage.setItem("ip", data)
-)
+export let IP_ADDRESS = new Store(ip === "" ? null : ip, data => {
+    if (data === null) {
+        sessionStorage.removeItem("ip")
+    } else {
+        sessionStorage.setItem("ip", data)
+    }
+})
 
 export let IS_GM = new Store(sessionStorage.getItem("gm") === "true", v =>
     sessionStorage.setItem("gm", v === true ? "true" : "false")
 )
 
-let maybe_id = parseInt(sessionStorage.getItem("server_id"))
+let maybe_id = parseInt(sessionStorage.getItem("server_id")!)
 
 export let SERVER_ID = new Store(isNaN(maybe_id) ? null : maybe_id, v => {
     if (v === null) {

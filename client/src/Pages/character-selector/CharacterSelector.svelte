@@ -1,8 +1,7 @@
 <script lang="ts">
     import { CAMPAIGNS, CAMPAIGN_NAME, IP_ADDRESS, IS_GM } from "../../data"
 
-    import { connect, getCharacters } from "../../server-interface"
-    import BattleData from "../character-data/BattleData.svelte"
+    import { connect, characterList } from "../../server-interface"
 
     let tmp_ip_address = ""
 </script>
@@ -24,7 +23,7 @@
             </tr>
         {:else}
             <tr><td class="title">{CAMPAIGN_NAME}</td></tr>
-            {#each getCharacters() as character}
+            {#each $characterList ?? [] as character}
                 <tr>
                     <td
                         ><a

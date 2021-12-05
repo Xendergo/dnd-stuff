@@ -4,7 +4,7 @@ import {
     Registry,
     Sendable,
 } from "triangulum"
-import { IP_ADDRESS } from "./data"
+import { IP_ADDRESS, SERVER_ID } from "./data"
 
 const messageRegistry = new Registry<Sendable>()
 
@@ -18,8 +18,8 @@ export class ConnectionManager extends AbstractListenerManager<
     constructor() {
         super(messageRegistry)
 
-        let address = `ws://${IP_ADDRESS.value}${
-            IP_ADDRESS.value.includes(":") ? "" : ":8000"
+        let address = `ws://${IP_ADDRESS.value?.trim()}${
+            IP_ADDRESS.value!.includes(":") ? "" : ":8000"
         }`
 
         this.ws = new WebSocket(address)
@@ -27,12 +27,21 @@ export class ConnectionManager extends AbstractListenerManager<
         this.ws.onmessage = e => {
             if (typeof e.data !== "string") return
 
-            this.onData(e.data as string)
+            console.log(e.data)
+
+            this.onData(e.data)
         }
 
         this.ws.onopen = e => {
             this.ready()
         }
+
+        this.ws.onerror = this.disconnect
+    }
+
+    disconnect() {
+        SERVER_ID.set(null)
+        IP_ADDRESS.set(null)
     }
 
     transmit(data: string) {
@@ -66,5 +75,5 @@ export class ConnectionManager extends AbstractListenerManager<
         return data as Sendable
     }
 
-    ws
+    ws: WebSocket
 }

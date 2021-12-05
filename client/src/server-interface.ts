@@ -1,101 +1,83 @@
-import { Store } from "./better-store"
-import { CAMPAIGNS, CAMPAIGN_NAME, IP_ADDRESS, SERVER_ID } from "./data"
-import { Sendable, strats } from "triangulum"
+import { ProceduralStore, Store } from "./better-store"
+import {
+    CAMPAIGNS,
+    CAMPAIGN_NAME,
+    IP_ADDRESS,
+    SERVER_ID as CLIENT_ID,
+} from "./data"
 import { Character } from "./characters"
-import { ConnectionManager, Message } from "./socket"
+import { ConnectionManager } from "./socket"
+import { CharacterUpdated, Id, RequestId } from "./sendable-types"
 
 export let socket: ConnectionManager | null = null
 
-@Message(
-    "Id",
-    strats.class({
-        id: strats.isNumber,
-    })
-)
-export class Id extends Sendable {
-    constructor(id: number) {
-        super()
-        this.id = id
-    }
-
-    id: number
-}
-
-@Message("RequestId", strats.dontCheck())
-export class RequestId extends Sendable {
-    constructor() {
-        super()
-    }
-}
-
-@Message(
-    "CharacterUpdated",
-    strats.class({
-        data: strats.isString,
-        player_id: strats.isNumber,
-    })
-)
-export class CharacterUpdated extends Sendable {
-    constructor(data: Character) {
-        super()
-        this.data = JSON.stringify(data)
-    }
-
-    data: string
-    player_id: number | undefined = undefined
-}
-
 export function connect() {
-    socket = new ConnectionManager()
+    console.log("Trying to connect")
 
-    console.log(SERVER_ID.value)
-    if (SERVER_ID.value === null) {
+    try {
+        socket = new ConnectionManager()
+    } catch {
+        IP_ADDRESS.set(null)
+        return
+    }
+
+    if (CLIENT_ID.value === null) {
         socket.send(new RequestId())
     } else {
-        socket.send(new Id(SERVER_ID.value))
+        socket.send(new Id(CLIENT_ID.value))
     }
 
-    socket.listen(Id, id => SERVER_ID.set(id.id))
+    socket.listen(Id, id => CLIENT_ID.set(id.id))
 
     socket.listen(CharacterUpdated, onCharacterUpdated)
+
+    characterList.nextValueAvailable()
+
+    if (CAMPAIGN_NAME !== null) {
+        CAMPAIGNS.value[CAMPAIGN_NAME].forEach(character => {
+            socket!.send(new CharacterUpdated(character))
+        })
+    }
 }
 
 let networkCharacters: Character[] = []
 
-console.log("Trying to connect")
-if (IP_ADDRESS.value) {
-    connect()
-}
+class CharacterList extends ProceduralStore<Store<Character>[] | null> {
+    protected next(): Store<Character>[] | null {
+        if (CAMPAIGN_NAME === null) {
+            return null
+        }
 
-export function getCharacters() {
-    if (socket === null) {
-        let characters = CAMPAIGNS.value[CAMPAIGN_NAME]
+        if (socket === null) {
+            let characters = CAMPAIGNS.value[CAMPAIGN_NAME]
 
-        return characters.map(
-            v => new Store(v, () => CAMPAIGNS.notifySubscribers())
-        )
-    } else {
-        let localCharacters = CAMPAIGNS.value[CAMPAIGN_NAME]
+            return characters.map(
+                v => new Store(v, () => CAMPAIGNS.notifySubscribers())
+            )
+        } else {
+            let localCharacters = CAMPAIGNS.value[CAMPAIGN_NAME]
 
-        let localCharactersStores = localCharacters.map(
-            v => new Store(v, () => CAMPAIGNS.notifySubscribers())
-        )
+            let localCharactersStores = localCharacters.map(
+                v =>
+                    new Store(v, updatedCharacter => {
+                        CAMPAIGNS.notifySubscribers()
+                        socket!.send(new CharacterUpdated(updatedCharacter))
+                    })
+            )
 
-        localCharactersStores.forEach(store => {
-            store.subscribe(v => {
-                socket.send(new CharacterUpdated(v))
-            })
-        })
+            let networkCharactersStores = networkCharacters.map(
+                v => new Store(v)
+            )
 
-        // TODO: Include stores from other connected users
-
-        return localCharactersStores
+            return [...localCharactersStores, ...networkCharactersStores]
+        }
     }
 }
 
+export let characterList: CharacterList = new CharacterList()
+
 function onCharacterUpdated(characterUpdated: CharacterUpdated) {
-    if (characterUpdated.player_id === SERVER_ID.value) {
-        console.log("RECEIVED OWN DATA")
+    if (characterUpdated.player_id === CLIENT_ID.value) {
         return
     }
 
@@ -107,12 +89,17 @@ function onCharacterUpdated(characterUpdated: CharacterUpdated) {
 
     if (indexOfCharacter === -1) {
         networkCharacters.push(decoded)
-        return
+    } else {
+        networkCharacters[indexOfCharacter] = decoded
+
+        networkCharacters = networkCharacters.filter(
+            (v, i) => i <= indexOfCharacter || v.name !== decoded.name
+        )
     }
 
-    networkCharacters[indexOfCharacter] = decoded
+    characterList.nextValueAvailable()
+}
 
-    networkCharacters = networkCharacters.filter(
-        (v, i) => i <= indexOfCharacter || v.name !== decoded.name
-    )
+if (IP_ADDRESS.value) {
+    connect()
 }

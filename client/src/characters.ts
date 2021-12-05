@@ -1,6 +1,6 @@
 export class Character {
-    constructor(data, readonly = false) {
-        this.readonly = readonly
+    constructor(data, owner = null) {
+        this.owner = owner
 
         this.name = data.name
         this.hp = data.hp ?? null
@@ -8,7 +8,7 @@ export class Character {
         this.initiative = data.initiative ?? null
     }
 
-    readonly: boolean
+    owner: number | null
 
     name: string
     hp_max: number | null
