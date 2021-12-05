@@ -190,7 +190,7 @@ async fn run_server(
             Some(maybe_signal) = await_option(signal_receiver.as_mut().map(|v| v.recv())) => {
                 let signal = match maybe_signal {
                     Some(v) => v,
-                    None => break,
+                    None => continue,
                 };
 
                 match signal {
