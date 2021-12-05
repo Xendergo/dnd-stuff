@@ -40,7 +40,27 @@ export function connect() {
     }
 }
 
-let networkCharacters: Character[] = []
+/*
+ * `networkCharacters` gets cleared when someone clicks a link to a character's data,
+ *  so the data has to be cached so it can be retrieved again without waiting for the server
+ */
+
+let networkCharacterCache = JSON.parse(
+    sessionStorage.getItem("networkCharacterCache") ?? "[]"
+).map(
+    v =>
+        new Store(new Character(v), () => networkCharacters.notifySubscribers())
+)
+
+let networkCharacters: Store<Store<Character>[]> = new Store(
+    networkCharacterCache,
+    v => {
+        sessionStorage.setItem(
+            "networkCharacterCache",
+            JSON.stringify(v.map(character => character.value))
+        )
+    }
+)
 
 class CharacterList extends ProceduralStore<Store<Character>[] | null> {
     protected next(): Store<Character>[] | null {
@@ -65,9 +85,7 @@ class CharacterList extends ProceduralStore<Store<Character>[] | null> {
                     })
             )
 
-            let networkCharactersStores = networkCharacters.map(
-                v => new Store(v)
-            )
+            let networkCharactersStores = networkCharacters.value
 
             return [...localCharactersStores, ...networkCharactersStores]
         }
@@ -83,17 +101,24 @@ function onCharacterUpdated(characterUpdated: CharacterUpdated) {
 
     let decoded = new Character(JSON.parse(characterUpdated.data))
 
-    let indexOfCharacter = networkCharacters.findIndex(
-        v => v.name === decoded.name
+    let indexOfCharacter = networkCharacters.value.findIndex(
+        v => v.value.name === decoded.name
     )
 
     if (indexOfCharacter === -1) {
-        networkCharacters.push(decoded)
+        networkCharacters.update(v => {
+            v.push(new Store(decoded, networkCharacters.notifySubscribers))
+            return v
+        })
     } else {
-        networkCharacters[indexOfCharacter] = decoded
+        networkCharacters.value[indexOfCharacter].set(decoded)
 
-        networkCharacters = networkCharacters.filter(
-            (v, i) => i <= indexOfCharacter || v.name !== decoded.name
+        networkCharacters.update(characters =>
+            characters.filter(
+                (characterTesting, i) =>
+                    i <= indexOfCharacter ||
+                    characterTesting.value.name !== decoded.name
+            )
         )
     }
 

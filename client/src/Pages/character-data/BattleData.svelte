@@ -11,10 +11,10 @@
     <tr>
         <td>
             <p>
-                HP <input type="number" bind:value={$character.hp} /><button
-                    on:click={() => ($character.hp -= 1)}>-1</button
-                ><button on:click={() => ($character.hp += 1)}>+1</button
-                ><button on:click={() => ($character.hp = $character.hp_max)}
+                HP <input type="number" bind:value={$character.hp} />
+                <button on:click={() => ($character.hp -= 1)}>-1</button>
+                <button on:click={() => ($character.hp += 1)}>+1</button>
+                <button on:click={() => ($character.hp = $character.hp_max)}
                     >🔄</button
                 >
             </p>

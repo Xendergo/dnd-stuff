@@ -23,7 +23,9 @@
         window.location.href = "../"
     }
 
-    let character = characterList[characterIndex]
+    let character = characterList.value![characterIndex]
+
+    console.log(character, characterIndex, characterList.value)
 </script>
 
 <svelte:head>

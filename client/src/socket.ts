@@ -27,8 +27,6 @@ export class ConnectionManager extends AbstractListenerManager<
         this.ws.onmessage = e => {
             if (typeof e.data !== "string") return
 
-            console.log(e.data)
-
             this.onData(e.data)
         }
 
