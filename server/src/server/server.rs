@@ -1,4 +1,4 @@
-use std::{convert::Infallible, net::SocketAddr, sync::Arc};
+use std::{collections::HashMap, convert::Infallible, net::SocketAddr, sync::Arc};
 
 use hyper::{service, upgrade::Upgraded, Body, Request, Response, Server};
 use hyper_tungstenite::{
@@ -11,7 +11,7 @@ use tokio::{
     sync::{
         broadcast,
         mpsc::{self, UnboundedSender},
-        oneshot,
+        oneshot, RwLock,
     },
 };
 
@@ -45,11 +45,14 @@ pub(super) async fn start_server(
 
     let (internal_message_broadcaster, _) = broadcast::channel(32);
 
+    let character_states = Arc::new(RwLock::new(HashMap::new()));
+
     // Register the request handler
     let make_service = service::make_service_fn(move |_conn| {
         let runtime = Arc::clone(&runtime);
         let signal_sender = signal_sender.clone();
         let internal_message_broadcaster = internal_message_broadcaster.clone();
+        let character_states = Arc::clone(&character_states);
 
         let service = service::service_fn(move |req| {
             handle_request(
@@ -57,6 +60,7 @@ pub(super) async fn start_server(
                 Arc::clone(&runtime),
                 signal_sender.clone(),
                 internal_message_broadcaster.clone(),
+                Arc::clone(&character_states),
             )
         });
 
@@ -96,6 +100,7 @@ async fn handle_request(
     runtime: Arc<Runtime>,
     signal_sender: UnboundedSender<ServerMessage>,
     internal_message_broadcaster: broadcast::Sender<InternalMessage>,
+    character_states: Arc<RwLock<HashMap<String, String>>>,
 ) -> Result<Response<Body>, Error> {
     if hyper_tungstenite::is_upgrade_request(&request) {
         println!("Received upgrade request");
@@ -107,6 +112,7 @@ async fn handle_request(
                 websocket,
                 signal_sender.clone(),
                 internal_message_broadcaster.clone(),
+                Arc::clone(&character_states),
             )
             .await
             {
@@ -138,6 +144,7 @@ async fn serve_websocket(
     websocket: HyperWebsocket,
     signal_sender: UnboundedSender<ServerMessage>,
     internal_message_broadcaster: broadcast::Sender<InternalMessage>,
+    character_states: Arc<RwLock<HashMap<String, String>>>,
 ) -> Result<(), Error> {
     let mut internal_message_receiver = internal_message_broadcaster.subscribe();
 
@@ -182,15 +189,33 @@ async fn serve_websocket(
                             }
 
                             FromClientMessage::CharacterUpdated { data } => {
+                                let name = match serde_json::from_str(&data) {
+                                    Ok(serde_json::Value::Object(obj)) => {
+                                        let maybe_name = obj.get("name");
+
+                                        match maybe_name {
+                                            Some(serde_json::Value::String(name)) => name.clone(),
+                                            _ => continue,
+                                        }
+                                    }
+
+                                    _ => continue,
+                                };
+
+
                                 internal_message_broadcaster
                                     .send(InternalMessage::CharacterUpdated {
-                                        character_data: data,
+                                        character_data: data.clone(),
                                         player_id: match id {
                                             Some(v) => v,
                                             None => continue,
                                         },
                                     })
                                     .ok();
+
+                                let mut states = character_states.write().await;
+                                states.insert(name, data);
+                                drop(states);
                             }
                         }
                     }
