@@ -1,11 +1,8 @@
 use std::{collections::HashMap, convert::Infallible, net::SocketAddr, sync::Arc};
 
-use hyper::{service, upgrade::Upgraded, Body, Request, Response, Server};
-use hyper_tungstenite::{
-    tungstenite::{Error, Message},
-    HyperWebsocket, WebSocketStream,
-};
-use iced::futures::{SinkExt, StreamExt};
+use hyper::{service, Body, Request, Response, Server};
+use hyper_tungstenite::{tungstenite::Error, HyperWebsocket};
+use iced::futures::StreamExt;
 use tokio::{
     runtime::Runtime,
     sync::{
@@ -17,7 +14,10 @@ use tokio::{
 
 use serde::{Deserialize, Serialize};
 
-use crate::utils::get_local_ip;
+use crate::{
+    server::websocket::{on_message, received_internal_message},
+    utils::get_local_ip,
+};
 
 use super::{
     ServerMessage::{self, *},
@@ -25,7 +25,7 @@ use super::{
 };
 
 #[derive(Debug, Clone)]
-enum InternalMessage {
+pub(super) enum InternalMessage {
     CharacterUpdated {
         character_data: String,
         player_id: u32,
@@ -127,14 +127,14 @@ async fn handle_request(
 }
 
 #[derive(Debug, Deserialize)]
-enum FromClientMessage {
+pub(super) enum FromClientMessage {
     RequestId {},
     Id { id: u32 },
     CharacterUpdated { data: String },
 }
 
 #[derive(Debug, Serialize)]
-enum ToClientMessage {
+pub(super) enum ToClientMessage {
     Id { id: u32 },
     CharacterUpdated { data: String, player_id: u32 },
 }
@@ -156,84 +156,9 @@ async fn serve_websocket(
         tokio::select! {
             maybe_message = websocket.next() => {
                 // Exit the loop if websocket.next returns none, because if it does, the websocket was closed
+                let message = if let Some(v) = maybe_message { v } else { break };
 
-                let message = if let Some(v) = maybe_message {v} else {break};
-
-                match message? {
-                    Message::Text(msg_raw) => {
-                        println!("{}", msg_raw);
-                        let msg: FromClientMessage = match serde_json::from_str(&msg_raw) {
-                            Ok(v) => v,
-                            Err(_) => continue,
-                        };
-
-                        match msg {
-                            FromClientMessage::RequestId {} => {
-                                let id_value = rand::random();
-
-                                send(&mut websocket, ToClientMessage::Id {id:id_value}).await?;
-
-                                id = Some(id_value);
-
-                                signal_sender.send(NewConnection { id: id.unwrap() }).ok();
-                            },
-
-                            FromClientMessage::Id {id: new_id} => {
-                                if id.is_some() {
-                                    continue;
-                                }
-
-                                id = Some(new_id);
-
-                                signal_sender.send(NewConnection { id: id.unwrap() }).ok();
-                            }
-
-                            FromClientMessage::CharacterUpdated { data } => {
-                                let name = match serde_json::from_str(&data) {
-                                    Ok(serde_json::Value::Object(obj)) => {
-                                        let maybe_name = obj.get("name");
-
-                                        match maybe_name {
-                                            Some(serde_json::Value::String(name)) => name.clone(),
-                                            _ => continue,
-                                        }
-                                    }
-
-                                    _ => continue,
-                                };
-
-
-                                internal_message_broadcaster
-                                    .send(InternalMessage::CharacterUpdated {
-                                        character_data: data.clone(),
-                                        player_id: match id {
-                                            Some(v) => v,
-                                            None => continue,
-                                        },
-                                    })
-                                    .ok();
-
-                                let mut states = character_states.write().await;
-                                states.insert(name, data);
-                                drop(states);
-                            }
-                        }
-                    }
-
-                    Message::Close(msg) => {
-                        // No need to send a reply: tungstenite takes care of this for you.
-                        if let Some(msg) = &msg {
-                            println!(
-                                "Received close message with code {} and message: {}",
-                                msg.code, msg.reason
-                            );
-                        } else {
-                            println!("Received close message");
-                        }
-                    }
-
-                    _ => {}
-                }
+                on_message(message, &mut websocket, &mut id, &signal_sender, &internal_message_broadcaster, &character_states).await?;
             }
 
             maybe_internal_message = internal_message_receiver.recv() => {
@@ -243,11 +168,7 @@ async fn serve_websocket(
                     Err(_) => continue,
                 };
 
-                match internal_message {
-                    InternalMessage::CharacterUpdated { character_data, player_id } => {
-                        send(&mut websocket, ToClientMessage::CharacterUpdated { data: character_data, player_id }).await?;
-                    }
-                }
+                received_internal_message(internal_message, &mut websocket).await?;
             }
         }
     }
@@ -257,15 +178,6 @@ async fn serve_websocket(
     }
 
     Ok(())
-}
-
-async fn send(
-    websocket: &mut WebSocketStream<Upgraded>,
-    message: ToClientMessage,
-) -> Result<(), Error> {
-    websocket
-        .send(Message::Text(serde_json::to_string(&message).unwrap()))
-        .await
 }
 
 // #[cfg(test)]
