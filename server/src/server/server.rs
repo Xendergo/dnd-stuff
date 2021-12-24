@@ -100,7 +100,7 @@ async fn handle_request(
     runtime: Arc<Runtime>,
     signal_sender: UnboundedSender<ServerMessage>,
     internal_message_broadcaster: broadcast::Sender<InternalMessage>,
-    character_states: Arc<RwLock<HashMap<String, String>>>,
+    character_states: Arc<RwLock<HashMap<String, (u32, String)>>>,
 ) -> Result<Response<Body>, Error> {
     if hyper_tungstenite::is_upgrade_request(&request) {
         println!("Received upgrade request");
@@ -144,7 +144,7 @@ async fn serve_websocket(
     websocket: HyperWebsocket,
     signal_sender: UnboundedSender<ServerMessage>,
     internal_message_broadcaster: broadcast::Sender<InternalMessage>,
-    character_states: Arc<RwLock<HashMap<String, String>>>,
+    character_states: Arc<RwLock<HashMap<String, (u32, String)>>>,
 ) -> Result<(), Error> {
     let mut internal_message_receiver = internal_message_broadcaster.subscribe();
 

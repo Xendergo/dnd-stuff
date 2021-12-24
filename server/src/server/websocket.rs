@@ -30,7 +30,7 @@ pub(super) async fn on_message(
     id: &mut Option<u32>,
     signal_sender: &UnboundedSender<ServerMessage>,
     internal_message_broadcaster: &broadcast::Sender<InternalMessage>,
-    character_states: &Arc<RwLock<HashMap<String, String>>>,
+    character_states: &Arc<RwLock<HashMap<String, (u32, String)>>>,
 ) -> Result<(), Error> {
     if let Message::Text(msg_raw) = message? {
         println!("{}", msg_raw);
@@ -40,9 +40,13 @@ pub(super) async fn on_message(
         };
 
         match msg {
-            FromClientMessage::RequestId {} => requested_id(websocket, id, signal_sender).await?,
+            FromClientMessage::RequestId {} => {
+                requested_id(websocket, character_states, id, signal_sender).await?
+            }
 
-            FromClientMessage::Id { id: new_id } => received_id(new_id, id, signal_sender).await?,
+            FromClientMessage::Id { id: new_id } => {
+                received_id(websocket, character_states, new_id, id, signal_sender).await?
+            }
 
             FromClientMessage::CharacterUpdated { data } => {
                 character_updated(data, internal_message_broadcaster, *id, character_states).await
@@ -55,6 +59,7 @@ pub(super) async fn on_message(
 
 async fn requested_id(
     websocket: &mut WebSocketStream<Upgraded>,
+    character_states: &Arc<RwLock<HashMap<String, (u32, String)>>>,
     id: &mut Option<u32>,
     signal_sender: &UnboundedSender<ServerMessage>,
 ) -> Result<(), Error> {
@@ -62,14 +67,14 @@ async fn requested_id(
 
     send(websocket, ToClientMessage::Id { id: id_value }).await?;
 
-    *id = Some(id_value);
-
-    signal_sender.send(NewConnection { id: id.unwrap() }).ok();
+    id_assigned(websocket, character_states, id_value, id, signal_sender).await?;
 
     Ok(())
 }
 
 async fn received_id(
+    websocket: &mut WebSocketStream<Upgraded>,
+    character_states: &Arc<RwLock<HashMap<String, (u32, String)>>>,
     new_id: u32,
     id: &mut Option<u32>,
     signal_sender: &UnboundedSender<ServerMessage>,
@@ -78,9 +83,34 @@ async fn received_id(
         return Ok(());
     }
 
+    id_assigned(websocket, character_states, new_id, id, signal_sender).await?;
+
+    Ok(())
+}
+
+async fn id_assigned(
+    websocket: &mut WebSocketStream<Upgraded>,
+    character_states: &Arc<RwLock<HashMap<String, (u32, String)>>>,
+    new_id: u32,
+    id: &mut Option<u32>,
+    signal_sender: &UnboundedSender<ServerMessage>,
+) -> Result<(), Error> {
     *id = Some(new_id);
 
     signal_sender.send(NewConnection { id: id.unwrap() }).ok();
+
+    let characters = character_states.read().await;
+
+    for (player_id, data) in characters.values() {
+        send(
+            websocket,
+            ToClientMessage::CharacterUpdated {
+                data: data.to_string(),
+                player_id: *player_id,
+            },
+        )
+        .await?;
+    }
 
     Ok(())
 }
@@ -89,7 +119,7 @@ async fn character_updated(
     data: String,
     internal_message_broadcaster: &broadcast::Sender<InternalMessage>,
     id: Option<u32>,
-    character_states: &Arc<RwLock<HashMap<String, String>>>,
+    character_states: &Arc<RwLock<HashMap<String, (u32, String)>>>,
 ) {
     let name = match serde_json::from_str(&data) {
         Ok(serde_json::Value::Object(obj)) => {
@@ -115,7 +145,7 @@ async fn character_updated(
         .ok();
 
     let mut states = character_states.write().await;
-    states.insert(name, data);
+    states.insert(name, (id.unwrap(), data));
     drop(states);
 }
 
