@@ -8,6 +8,7 @@
 
     import BattleData from "./BattleData.svelte"
     import { characterList } from "../../server-interface"
+    import Items from "./Items.svelte"
 
     if (CHARACTER_NAME === null) {
         window.location.href = "../"
@@ -40,5 +41,20 @@
 </svelte:head>
 
 <main>
-    <BattleData bind:character {writeable} />
+    <div>
+        <BattleData bind:character {writeable} />
+    </div>
+    <div>
+        <Items bind:character {writeable} />
+    </div>
 </main>
+
+<style>
+    main {
+        display: flex;
+    }
+
+    main * {
+        margin-right: 5vw;
+    }
+</style>

@@ -9,7 +9,7 @@ This isn't really meant to replace pencil and paper.
 -   [x] Multiple characters
 -   [x] GMs can keep track of multiple campaigns each with multiple NPCs
 -   [x] HP maximum, current HP, & Initiative
--   [ ] Items your character has and their quantities & weights
+-   [x] Items your character has and their quantities & weights
 -   [ ] Your character's spell list
 -   [ ] Available spell slots
 -   [ ] Allow GMs to make preset NPCs so they can quickly make a pack of enemies or something
@@ -27,6 +27,6 @@ The server is meant to run over LAN, and should require no prior setup, besides 
 
 -   [ ] Serve the website
 -   [ ] Allow the GM to roll initiative for everyone
--   [ ] Allow people to look at other people's character data
+-   [x] Allow people to look at other people's character data
 -   [ ] Allow GMs to make NPCs in advance and not show them to users
 -   [ ] Backing up data outside of browser storage (maybe)
