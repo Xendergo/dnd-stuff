@@ -16,6 +16,12 @@ export function connect() {
         return
     }
 
+    if (CLIENT_ID.value === null) {
+        socket.send(new RequestId())
+    } else {
+        socket.send(new Id(CLIENT_ID.value))
+    }
+
     CLIENT_ID.subscribe(id => {
         if (CAMPAIGN_NAME !== null && id !== null) {
             CAMPAIGNS.value[CAMPAIGN_NAME].forEach(character => {
@@ -24,12 +30,6 @@ export function connect() {
             })
         }
     })
-
-    if (CLIENT_ID.value === null) {
-        socket.send(new RequestId())
-    } else {
-        socket.send(new Id(CLIENT_ID.value))
-    }
 
     socket.listen(Id, id => {
         CLIENT_ID.set(id.id)
@@ -64,7 +64,10 @@ let networkCharacters: Store<Store<Character>[]> = new Store(
 
 class CharacterList extends ProceduralStore<Store<Character>[] | null> {
     protected next(): Store<Character>[] | null {
-        if (CAMPAIGN_NAME === null) {
+        if (
+            CAMPAIGN_NAME === null ||
+            CAMPAIGNS.value[CAMPAIGN_NAME] === undefined
+        ) {
             return null
         }
 
@@ -99,6 +102,7 @@ class CharacterList extends ProceduralStore<Store<Character>[] | null> {
 export let characterList: CharacterList = new CharacterList()
 
 function onCharacterUpdated(characterUpdated: CharacterUpdated) {
+    console.log(characterUpdated)
     if (characterUpdated.player_id === CLIENT_ID.value) {
         return
     }
@@ -115,6 +119,7 @@ function onCharacterUpdated(characterUpdated: CharacterUpdated) {
             return v
         })
     } else {
+        console.log(networkCharacters)
         networkCharacters.value[indexOfCharacter].set(decoded)
 
         networkCharacters.update(characters =>

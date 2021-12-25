@@ -4,6 +4,13 @@
     import { connect, characterList } from "../../server-interface"
 
     let tmp_ip_address = ""
+
+    if (
+        CAMPAIGN_NAME !== null &&
+        CAMPAIGNS.value[CAMPAIGN_NAME] === undefined
+    ) {
+        location.href = "./"
+    }
 </script>
 
 <main>

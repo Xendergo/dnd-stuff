@@ -40,6 +40,7 @@ export class ConnectionManager extends AbstractListenerManager<
     disconnect() {
         CLIENT_ID.set(null)
         IP_ADDRESS.set(null)
+        sessionStorage.removeItem("networkCharacterCache")
     }
 
     transmit(data: string) {
