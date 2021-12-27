@@ -52,9 +52,20 @@
 <style>
     main {
         display: flex;
+        position: absolute;
+        top: 0;
+        left: 0;
+        height: calc(100vh - (100vh - 100%));
     }
 
-    main * {
-        margin-right: 5vw;
+    div + div {
+        margin-left: calc(2vw - 16px);
+        padding-left: 2vw;
+        border-left: 1px dashed grey;
+    }
+
+    div {
+        margin: 16px;
+        min-width: max-content;
     }
 </style>
