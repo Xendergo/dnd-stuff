@@ -9,6 +9,7 @@
     import BattleData from "./BattleData.svelte"
     import { characterList } from "../../server-interface"
     import Items from "./Items.svelte"
+    import Spells from "./Spells.svelte"
 
     if (CHARACTER_NAME === null) {
         window.location.href = "../"
@@ -46,6 +47,9 @@
     </div>
     <div>
         <Items bind:character {writeable} />
+    </div>
+    <div>
+        <Spells bind:character {writeable} />
     </div>
 </main>
 

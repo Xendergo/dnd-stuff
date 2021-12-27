@@ -10,7 +10,7 @@ This isn't really meant to replace pencil and paper.
 -   [x] GMs can keep track of multiple campaigns each with multiple NPCs
 -   [x] HP maximum, current HP, & Initiative
 -   [x] Items your character has and their quantities & weights
--   [ ] Your character's spell list
+-   [x] Your character's spell list
 -   [ ] Available spell slots
 -   [ ] Allow GMs to make preset NPCs so they can quickly make a pack of enemies or something
 -   [ ] Allow exporting user data to a file so you can safely clear your browser storage

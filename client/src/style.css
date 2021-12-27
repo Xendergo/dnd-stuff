@@ -9,7 +9,8 @@ body {
 }
 
 button,
-input {
+input,
+select {
     background-color: transparent;
     border: 2px solid white;
     border-radius: 8px;
@@ -20,6 +21,25 @@ input {
 
 button:hover {
     cursor: pointer;
+}
+
+select {
+    -webkit-appearance: none;
+    appearance: none;
+    padding-right: 32px;
+}
+
+.select-wrapper {
+    position: relative;
+    display: inline-block;
+}
+
+.select-wrapper::after {
+    content: "⛛";
+    font-size: 0.6rem;
+    top: 22px;
+    right: 20px;
+    position: absolute;
 }
 
 .column {
