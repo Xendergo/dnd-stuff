@@ -13,6 +13,11 @@ export class Character {
         this.items = (data.items ?? []).map(v => new Item(v))
 
         this.spells = (data.spells ?? []).map(v => new Spell(v))
+
+        this.spellSlots = data.spellSlots ?? [0, 0, 0, 0, 0, 0, 0, 0, 0]
+        this.currentSpellSlots = data.currentSpellSlots ?? [
+            0, 0, 0, 0, 0, 0, 0, 0, 0,
+        ]
     }
 
     owner: number | null
@@ -25,4 +30,7 @@ export class Character {
     items: Item[]
 
     spells: Spell[]
+
+    spellSlots: number[]
+    currentSpellSlots: number[]
 }

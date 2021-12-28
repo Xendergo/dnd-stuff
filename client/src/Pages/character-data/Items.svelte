@@ -36,9 +36,3 @@
         }}>New item</button
     >
 {/if}
-
-<style>
-    input[type="number"] {
-        width: 3rem;
-    }
-</style>

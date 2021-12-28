@@ -1,7 +1,11 @@
 * {
-    font-size: x-large;
+    font-size: 1.5rem;
     font-family: "Liberation serif", "Times New Roman", Times, serif;
     color: white;
+}
+
+html {
+    font-size: 1rem;
 }
 
 body {
@@ -29,12 +33,16 @@ select {
     padding-right: 32px;
 }
 
+select:disabled {
+    padding-right: 8px;
+}
+
 .select-wrapper {
     position: relative;
     display: inline-block;
 }
 
-.select-wrapper::after {
+.select-wrapper[disabled="false"]::after {
     content: "⛛";
     font-size: 0.6rem;
     top: 22px;
@@ -67,4 +75,8 @@ input::-webkit-inner-spin-button {
 /* Firefox */
 input[type="number"] {
     -moz-appearance: textfield;
+}
+
+input[type="number"] {
+    width: 3rem;
 }

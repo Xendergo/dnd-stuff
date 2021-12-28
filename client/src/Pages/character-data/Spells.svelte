@@ -10,8 +10,8 @@
 
 {#each $character.spells as spell, i}
     <input placeholder="name" bind:value={spell.name} disabled={!writeable} />
-    <div class="select-wrapper">
-        <select bind:value={spell.level}>
+    <div class="select-wrapper" disabled={!writeable}>
+        <select bind:value={spell.level} disabled={!writeable}>
             <option value="0">Cantrip</option>
             <option value="1">Lvl 1</option>
             <option value="2">Lvl 2</option>

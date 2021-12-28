@@ -61,9 +61,3 @@
         </td>
     </tr>
 </table>
-
-<style>
-    input {
-        width: 3rem;
-    }
-</style>
