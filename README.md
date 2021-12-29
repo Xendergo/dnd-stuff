@@ -11,7 +11,7 @@ This isn't really meant to replace pencil and paper.
 -   [x] HP maximum, current HP, & Initiative
 -   [x] Items your character has and their quantities & weights
 -   [x] Your character's spell list
--   [ ] Available spell slots
+-   [x] Available spell slots
 -   [ ] Allow GMs to make preset NPCs so they can quickly make a pack of enemies or something
 -   [ ] Allow exporting user data to a file so you can safely clear your browser storage
 -   [ ] List of all spells (maybe)

@@ -10,7 +10,7 @@
     import { characterList } from "../../server-interface"
     import Items from "./Items.svelte"
     import Spells from "./Spells.svelte"
-    import SpellSlots from "./SpellSlots.svelte"
+    import SpellSlots from "./SpellSlots/SpellSlots.svelte"
 
     if (CHARACTER_NAME === null) {
         window.location.href = "../"
@@ -49,7 +49,7 @@
     <div>
         <Items bind:character {writeable} />
     </div>
-    <div>
+    <div id="spells-container">
         <SpellSlots bind:character {writeable} />
     </div>
     <div>
@@ -75,5 +75,9 @@
     div {
         margin: 16px;
         min-width: max-content;
+    }
+
+    #spells-container {
+        position: relative;
     }
 </style>

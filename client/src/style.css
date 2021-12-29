@@ -80,3 +80,22 @@ input[type="number"] {
 input[type="number"] {
     width: 3rem;
 }
+
+.circle {
+    border-radius: 50%;
+    width: calc(1.5rem + 20px);
+    height: calc(1.5rem + 20px);
+    display: inline-block;
+
+    border: 2px solid white;
+
+    margin-left: 8px;
+
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+}
+
+*[draggable="true"] {
+    cursor: grab;
+}
